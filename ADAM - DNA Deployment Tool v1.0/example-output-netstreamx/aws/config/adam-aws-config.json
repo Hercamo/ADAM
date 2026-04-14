@@ -1,0 +1,91 @@
+{
+  "adam_deployment": {
+    "platform": "aws",
+    "company": "NetStreamX",
+    "version": "0.4",
+    "generated": "2026-03-29",
+    "role": "warm-standby"
+  },
+  "governance_plane": {
+    "core_engine": {
+      "database": "neptune-gremlin",
+      "instance_class": "db.r6g.4xlarge",
+      "replicas": 3
+    },
+    "flight_recorder": {
+      "storage": "s3-object-lock",
+      "encryption": "kms",
+      "retention_years": 7
+    },
+    "crypto_vault": {
+      "service": "kms",
+      "key_spec": "RSA_4096"
+    }
+  },
+  "agent_mesh": {
+    "orchestration": "eks",
+    "total_agents": 82,
+    "node_groups": {
+      "governance": {
+        "instance_type": "m6i.4xlarge",
+        "min": 3,
+        "max": 10
+      },
+      "agent_mesh": {
+        "instance_type": "m6i.8xlarge",
+        "min": 3,
+        "max": 50
+      },
+      "gpu": {
+        "instance_type": "p4d.24xlarge",
+        "min": 1,
+        "max": 20
+      }
+    }
+  },
+  "ai_services": {
+    "provider": "bedrock",
+    "models": {
+      "reasoning": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "execution": "anthropic.claude-3-haiku-20240307-v1:0",
+      "deep_reasoning": "anthropic.claude-3-opus-20240229-v1:0"
+    }
+  },
+  "boss_config": {
+    "dimensions": {
+      "financial_exposure": 3.6,
+      "regulatory_impact": 2.9,
+      "rights_certainty": 4.2,
+      "security_impact": 4.6,
+      "doctrinal_alignment": 3.8,
+      "reputational_risk": 3.3
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Immediate Escalation"
+      }
+    }
+  }
+}
