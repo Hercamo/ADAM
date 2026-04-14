@@ -1,0 +1,213 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# ADAM Exception Economy Configuration
+# Includes AGT Light Two-Dimensional Trust Integration
+# ══════════════════════════════════════════════════════════════════════════════
+# Version 2.0 | April 2026
+# Reference: ADAM Main Book Part V.1 (Exception Economy + Autonomy Budget)
+# AGT Integration: AGT Agent Mesh trust score thresholds added in v2.0
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── BOSS SCORE ESCALATION TIERS ───────────────────────────────────────────────
+# The SOAP-to-OHSHAT spectrum governs ADAM's autonomous execution decisions.
+# These tiers are ADAM-sovereign. AGT does not define or modify these tiers.
+boss_escalation_tiers:
+  soap:
+    range: [0, 10]
+    label: "Safe & Optimum Autonomous Performance"
+    routing_decision: "autonomous"             # Machine-readable enum: autonomous|constrained|elevated|high|ohshat
+    action: autonomous_execution
+    logging: standard
+    director_notification: none
+    description: >
+      Full autonomous execution. System operating within design parameters.
+      Enhanced logging not required. Exception Economy budget consumed normally.
+
+  moderate:
+    range: [11, 30]
+    label: "Constrained Execution"
+    routing_decision: "constrained"
+    action: execute_with_enhanced_logging
+    logging: enhanced               # Verbose evidence capture, real-time Flight Recorder
+    director_notification: none
+    description: >
+      Autonomous execution continues but with enhanced audit trail.
+      Approaching exception tolerance window - monitor for accumulation.
+
+  elevated:
+    range: [31, 50]
+    label: "Exception Likely"
+    routing_decision: "elevated"
+    action: pause_pending_governor_review
+    logging: comprehensive
+    director_notification: none
+    escalation_target: domain_governor_agent  # Domain Governor Agent for that action's domain
+    governor_review_timeout_minutes: 15
+    description: >
+      Action paused pending Domain Governor Agent evaluation. Governor may
+      approve, modify constraints, or escalate to Director level.
+
+  high:
+    range: [51, 75]
+    label: "Director Review Required"
+    routing_decision: "high"
+    action: halt_pending_director_approval
+    logging: comprehensive
+    director_notification: relevant_director   # CFO for financial, Legal for regulatory, etc.
+    director_response_timeout_hours: 4
+    description: >
+      No execution without explicit Director approval. Director interface
+      surfaces action context, BOSS scores, and recommended decision.
+
+  ohshat:
+    range: [76, 100]
+    label: "Operational Hell, Send Humans Act Today!"
+    routing_decision: "ohshat"
+    action: full_stop_all_directors
+    logging: emergency_comprehensive
+    director_notification: all_directors       # CEO + all 4 Directors
+    auto_safe_mode: true
+    safe_mode_components:
+      - suspend_new_intent_processing
+      - freeze_financial_authorizations
+      - enable_read_only_mode_for_all_agents
+      - notify_ciso_immediate
+    description: >
+      Complete operational halt. All 5 Directors notified immediately.
+      System enters safe mode. CEO has co-authority with CISO for resolution.
+      Every action during OHSHAT is captured in Flight Recorder with emergency retention class.
+
+# ── AUTONOMY BUDGETS ───────────────────────────────────────────────────────────
+# Consumable resources governing cumulative autonomous action exposure.
+# Director-configurable via DNA Questionnaire Section 7.
+autonomy_budgets:
+  financial_exposure:
+    per_action_cap_usd: 50000        # Maximum single action financial commitment without Director approval
+    daily_aggregate_cap_usd: 500000
+    monthly_aggregate_cap_usd: 2000000
+    currency: USD
+    boss_dimension: financial_exposure
+    director_owner: CFO
+    governor_agent: financial_governor_agent
+
+  regulatory_exposure:
+    max_boss_regulatory_accumulation: 45   # Cumulative Regulatory Impact BOSS score before escalation
+    measurement_window_hours: 24
+    boss_dimension: regulatory_impact
+    director_owner: Legal Director
+    governor_agent: legal_compliance_governor_agent
+
+  reputational_exposure:
+    max_boss_reputational_accumulation: 40
+    measurement_window_hours: 24
+    boss_dimension: reputational_risk
+    director_owner: Market Director
+    governor_agent: market_ecosystem_governor_agent
+
+  sovereignty_exposure:
+    max_boss_sovereignty_accumulation: 50  # Maximum Sovereignty Action BOSS score accumulation
+    measurement_window_hours: 24
+    boss_dimension: sovereignty_action
+    director_owner: CISO
+    governor_agent: security_trust_governor_agent
+
+# ── EXCEPTION ECONOMY PARAMETERS ─────────────────────────────────────────────
+exception_economy:
+  tolerance_window_pct: 15           # 15% of actions in window may be exceptions before mandatory review
+  review_window_days: 30
+  non_idempotent_penalty_multiplier: 1.5   # Non-idempotent actions penalized 1.5x on BOSS score
+
+  # Exception types and their handling
+  exception_types:
+    policy_violation:
+      boss_adjustment: +10           # Add to composite score
+      requires_governor_review: true
+    budget_overage:
+      boss_adjustment: +15
+      requires_director_notification: true
+    authority_boundary_breach:
+      boss_adjustment: +20
+      requires_immediate_escalation: true
+
+# ── AGT LIGHT: TWO-DIMENSIONAL TRUST THRESHOLDS ───────────────────────────────
+# AGT Agent Mesh trust score (0-1000) integrated with BOSS Score tiers.
+# Both dimensions must satisfy their threshold for the lower-restriction execution path.
+# Reference: ADAM AGT Light Integration Plugin, Part 8.2 (Action Evaluation Sequence)
+agt_trust_integration:
+  enabled: true                      # Requires agentMesh.enabled: true in Helm values
+
+  # Trust score thresholds per BOSS tier
+  # An agent BELOW the trust threshold for its BOSS tier is escalated to the next higher tier
+  boss_tier_trust_requirements:
+    soap:
+      min_trust_score: 700
+      description: "Full autonomy requires agent trust >= 700 (Trusted tier)"
+    moderate:
+      min_trust_score: 500
+      description: "Constrained execution requires agent trust >= 500 (Standard tier)"
+    elevated:
+      min_trust_score: 300
+      description: "Governor review: trust below 300 triggers additional scrutiny"
+    high:
+      min_trust_score: 0             # Director approval required regardless of trust score
+      description: "Director approval required regardless of agent trust score"
+    ohshat:
+      min_trust_score: 0             # Full stop regardless of trust score
+      description: "Full stop regardless of agent trust score"
+
+  # Trust score event thresholds (trigger BOSS adjustments)
+  trust_score_boss_adjustments:
+    trust_below_500:
+      boss_adjustment: +5            # Add 5 to composite BOSS score
+      boss_dimension: security_impact
+    trust_below_300:
+      boss_adjustment: +15
+      boss_dimension: security_impact
+    trust_below_100:
+      boss_adjustment: +25           # Near-certain escalation to OHSHAT
+      boss_dimension: security_impact
+
+  # Agent suspension
+  agent_suspension:
+    suspend_below_trust_score: 100
+    suspension_duration_minutes: 60  # Minimum suspension before re-evaluation
+    suspension_requires_governor_review: true
+    reinstatement_requires: ciso_approval
+
+# ── DIRECTOR INTERFACE CONFIGURATION ──────────────────────────────────────────
+# 5-Director Constitution interface for exception economy alerts
+director_interfaces:
+  ceo:
+    escalation_triggers:
+      - ohshat_tier
+    notification_channel: azure_service_bus_priority
+    response_required_within_hours: 1
+
+  cfo:
+    escalation_triggers:
+      - financial_exposure_high_tier
+      - daily_financial_budget_80pct
+    notification_channel: azure_service_bus_priority
+    response_required_within_hours: 4
+
+  legal_director:
+    escalation_triggers:
+      - regulatory_impact_high_tier
+      - agt_compliance_eu_ai_act_breach
+    notification_channel: azure_service_bus_priority
+    response_required_within_hours: 4
+
+  market_director:
+    escalation_triggers:
+      - reputational_risk_high_tier
+      - agt_compliance_supply_chain_violation
+    notification_channel: azure_service_bus_priority
+    response_required_within_hours: 4
+
+  ciso:
+    escalation_triggers:
+      - security_impact_elevated_tier_and_above
+      - agt_ring_violation
+      - agt_identity_verification_failure
+      - agt_marketplace_unsigned_tool_attempt
+    notification_channel: azure_service_bus_immediate
+    response_required_within_hours: 2

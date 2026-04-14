@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OWASP Agentic Application Top 10 — ADAM + AGT Light Coverage Map",
+  "description": "Machine-readable mapping of OWASP Agentic Application Top 10 (December 2025) to ADAM architectural coverage and AGT Light runtime enforcement. Version 1.0, April 2026.",
+  "version": "1.0",
+  "owasp_reference": "OWASP Agentic Application Top 10 (December 2025)",
+  "coverage_posture": "ADAM provides complete architectural coverage of all 10 risks. AGT Light adds runtime enforcement at the execution boundary. Together: defense in depth.",
+
+  "risks": [
+    {
+      "code": "AA01",
+      "name": "Excessive Agency",
+      "description": "Agent given too many permissions or capabilities beyond what its task requires",
+      "adam_architectural_coverage": {
+        "primary_plane": "Policy & Risk Plane",
+        "components": [
+          "BOSS Score: Sovereignty Action dimension (weight 4.0) scores every action's authority scope",
+          "Exception Economy: autonomy budgets cap cumulative scope expansion",
+          "CORE Engine: tools_authorized list per agent vertex in CORE Graph",
+          "81-Agent Mesh: bounded authority containers per agent class"
+        ],
+        "boss_dimension": "sovereignty_action"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-os", "agent-runtime"],
+        "mechanism": "Agent OS capability sandboxing blocks tool calls outside tools_authorized list at <0.1ms. Agent Runtime execution rings prevent cross-ring privilege escalation architecturally.",
+        "deployment_config": "agent-os-policy-template.rego: deny_tools_outside_authorised_list rule"
+      },
+      "combined_posture": "Architectural constraint (BOSS + CORE Engine) + Runtime enforcement (Agent OS capability sandboxing) + Privilege containment (Agent Runtime rings)"
+    },
+    {
+      "code": "AA02",
+      "name": "Unrestricted Autonomy",
+      "description": "Agent permitted to take actions indefinitely without human oversight or stopping conditions",
+      "adam_architectural_coverage": {
+        "primary_plane": "Policy & Risk Plane",
+        "components": [
+          "BOSS Score SOAP-to-OHSHAT escalation tiers: autonomy is tiered, not binary",
+          "Autonomy budgets: consumable resources that enforce stopping conditions",
+          "Exception Economy: 15% tolerance window triggers mandatory review",
+          "5-Director Constitution: Director approval required at HIGH (51-75) tier"
+        ],
+        "boss_dimension": "sovereignty_action"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-os", "agent-runtime", "agent-sre"],
+        "mechanism": "Agent OS enforces BOSS tier gates at invocation boundary. Agent Runtime kill switch provides emergency stopping. Agent SRE error budgets enforce circuit breakers when operational limits are exceeded.",
+        "deployment_config": "exception-economy-config.yaml: escalation_tiers + agt_trust_thresholds; agent-slo-config.yaml: circuit breaker thresholds"
+      },
+      "combined_posture": "Tiered escalation (BOSS SOAP-to-OHSHAT) + Economic stopping condition (autonomy budgets) + Runtime circuit breakers (Agent SRE) + Emergency shutdown (Agent Runtime kill switch)"
+    },
+    {
+      "code": "AA03",
+      "name": "Goal Hijacking",
+      "description": "Malicious content in agent's context manipulates agent to pursue attacker's goals",
+      "adam_architectural_coverage": {
+        "primary_plane": "Policy & Risk Plane + Security & Trust Plane",
+        "components": [
+          "Separation of intelligence from execution capability: agents cannot self-modify their authority scope",
+          "CORE Engine validates every intent against doctrine graph before execution",
+          "Policy & Risk Plane evaluates action against CORE Engine at every orchestration step",
+          "BOSS Doctrinal Alignment dimension: measures deviation from authorized intent"
+        ],
+        "boss_dimension": "doctrinal_alignment"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-os"],
+        "mechanism": "Agent OS semantic intent classifier detects instruction injection at the invocation boundary before tool execution. Policy evaluation blocks actions that deviate from the intent declared in the originating Intent Object.",
+        "deployment_config": "agent-os-policy-template.rego: intent_deviation_detection rule"
+      },
+      "combined_posture": "Architectural intent validation (CORE Engine doctrine check) + Runtime semantic classification (Agent OS) + Evidence chain (Flight Recorder captures all intent deviations)"
+    },
+    {
+      "code": "AA04",
+      "name": "Tool Misuse",
+      "description": "Agent uses available tools in unintended ways or invokes unauthorized tools",
+      "adam_architectural_coverage": {
+        "primary_plane": "Interoperability Plane",
+        "components": [
+          "Cryptographic Authorization Vault: high-risk tool invocations require vault-issued authorization",
+          "Policy-bounded invocation contracts: per-agent, per-context tool authorization",
+          "MCP-Ready Control Surfaces: signed tool contracts for external integrations",
+          "CORE Engine tools_authorized per agent vertex"
+        ],
+        "boss_dimension": "security_impact"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-os", "agent-marketplace"],
+        "mechanism": "Agent OS capability sandboxing blocks invocations not in the authorized tool list. Agent Marketplace verifies Ed25519-signed manifests for all external tool/plugin invocations before execution.",
+        "deployment_config": "agent-marketplace values: requireSignedManifests: true + trustedPublisherKeys"
+      },
+      "combined_posture": "Vault-based authorization (Cryptographic Authorization Vault) + Runtime capability sandboxing (Agent OS) + Supply chain integrity (Agent Marketplace signing)"
+    },
+    {
+      "code": "AA05",
+      "name": "Identity and Access Compromise",
+      "description": "Agent identity spoofed or access controls bypassed, enabling unauthorized actions",
+      "adam_architectural_coverage": {
+        "primary_plane": "Security & Trust Plane",
+        "components": [
+          "Security & Trust Plane: verifiable identity requirement for all agents",
+          "No anonymous execution permitted anywhere in the 81-Agent Mesh",
+          "Scoped permissions per agent: authority scope defined in CORE Graph Agent vertex",
+          "mTLS enforced between all agent pods via Istio"
+        ],
+        "boss_dimension": "security_impact"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-mesh"],
+        "mechanism": "Agent Mesh issues W3C DID-based identity (Ed25519) to every agent at startup. IATP verifies identity and trust score on every inter-agent communication. Compromised identities are revoked via DID revocation registry without service interruption.",
+        "deployment_config": "agt-mesh-identity-bootstrap Job + agentMesh values: didMethod, keyVaultKeyRef"
+      },
+      "combined_posture": "Architectural identity requirement (Security & Trust Plane) + Cryptographic non-forgeability (Agent Mesh DIDs + Ed25519) + Continuous trust re-evaluation (IATP 0-1000 score)"
+    },
+    {
+      "code": "AA06",
+      "name": "Uncontrolled Delegation",
+      "description": "Agent delegates authority to other agents without proper authorization checks",
+      "adam_architectural_coverage": {
+        "primary_plane": "Security & Trust Plane + Agent Mesh & Orchestration Fabric",
+        "components": [
+          "Authority boundaries enforced by CORE Engine: delegation scope defined per agent",
+          "Governor Agent approval gates required for all cross-domain delegation",
+          "Cryptographic Authorization Vault: delegation authority stored as smart-contract governed grants",
+          "A2A Protocol: delegation messages carry cryptographic proof of authorization"
+        ],
+        "boss_dimension": "sovereignty_action"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-mesh"],
+        "mechanism": "Agent Mesh IATP trust scoring blocks delegation to agents with trust score below the delegation threshold. Delegation without a valid trust chain is rejected at the Agent Mesh layer before reaching the target agent.",
+        "deployment_config": "agentMesh values: minTrustScoreAutonomous, iaTpEnabled: true"
+      },
+      "combined_posture": "Architectural delegation boundaries (CORE Engine + Authority Vault) + Runtime trust chain validation (Agent Mesh IATP) + Evidence capture (Flight Recorder delegation events)"
+    },
+    {
+      "code": "AA07",
+      "name": "Insufficient Monitoring and Logging",
+      "description": "Insufficient visibility into agent actions, preventing detection of anomalies or attacks",
+      "adam_architectural_coverage": {
+        "primary_plane": "Evidence & Audit Plane",
+        "components": [
+          "Flight Recorder: hash-chained, tamper-evident, cryptographically signed entries",
+          "7-year WORM retention with Azure Confidential Ledger tamper anchoring",
+          "Self-Audit Agent: continuously validates evidence chain integrity",
+          "BOSS Score captured for every action in Azure Data Explorer time-series"
+        ],
+        "boss_dimension": "security_impact"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-sre"],
+        "mechanism": "Agent SRE provides quantitative SLO monitoring, error budget tracking, and structured telemetry for all agent operations. RGI-04 adapter forwards all AGT telemetry to the Flight Recorder in ADAM's canonical evidence format.",
+        "deployment_config": "rgiAdapter.enabled: true + agent-slo-config.yaml + Flight Recorder infrastructure (Section 6.2 of Deployment Spec)"
+      },
+      "combined_posture": "Constitutional evidence (Flight Recorder — not operational telemetry) + Quantitative SRE monitoring (Agent SRE) + Telemetry bridge (RGI-04 adapter)"
+    },
+    {
+      "code": "AA08",
+      "name": "Supply Chain Vulnerabilities",
+      "description": "Malicious or compromised tools, models, or plugins introduced into the agent's execution environment",
+      "adam_architectural_coverage": {
+        "primary_plane": "Interoperability Plane",
+        "components": [
+          "MCP-Ready Control Surfaces: signed tool contracts for external integrations",
+          "Cryptographic Authorization Vault: external tool authorization as vault-governed grants",
+          "Interoperability Plane: security posture for all external integration points",
+          "CORE Engine tools_authorized list: whitelist enforcement at agent level"
+        ],
+        "boss_dimension": "rights_certainty"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-marketplace"],
+        "mechanism": "Agent Marketplace enforces Ed25519 manifest signing for all external tools and plugins. Attestation verification is performed before any tool invocation. Revocation registry is checked hourly; real-time revocation check on BOSS HIGH+ actions.",
+        "deployment_config": "agentMarketplace values: requireSignedManifests: true, trustedPublisherKeys, revocationCheckInterval"
+      },
+      "combined_posture": "Architectural tool governance (MCP signed contracts + Auth Vault) + Runtime manifest verification (Agent Marketplace) + Revocation infrastructure (DID revocation registry)"
+    },
+    {
+      "code": "AA09",
+      "name": "Operational Disruption",
+      "description": "Agent actions cause unintended disruptions to production systems or downstream services",
+      "adam_architectural_coverage": {
+        "primary_plane": "Stability & Drift Plane",
+        "components": [
+          "Stability & Drift Plane: continuous monitoring of agent operational deviation",
+          "Operational Continuity Agent: maintains service continuity under failure conditions",
+          "Recovery & Rollback Hook (Part X of main book): native idempotency and compensation",
+          "Exception Economy: non-idempotent action penalties create economic disincentive for disruptive patterns"
+        ],
+        "boss_dimension": "security_impact"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-runtime", "agent-sre"],
+        "mechanism": "Agent SRE circuit breakers trip automatically when downstream agents/services degrade, routing to fallback behavior. Agent Runtime saga orchestration wraps all operations with compensating transactions for rollback. Chaos engineering validates resilience assumptions pre-production.",
+        "deployment_config": "agentRuntime values: sagaCompensationTimeout + agentSre values: errorBudgetWindowDays, sloConfigMapRef"
+      },
+      "combined_posture": "Architectural resilience design (Stability & Drift Plane + Recovery Hook) + Economic disruption disincentive (non-idempotent penalties) + Runtime circuit breakers and saga compensation (Agent SRE + Agent Runtime)"
+    },
+    {
+      "code": "AA10",
+      "name": "Misalignment and Trust Erosion",
+      "description": "Agent behavior gradually drifts from intended objectives, eroding trust through accumulated misalignment",
+      "adam_architectural_coverage": {
+        "primary_plane": "Stability & Drift Plane + Policy & Risk Plane",
+        "components": [
+          "CORE Engine drift detection: DriftRecord vertices track measured divergence from doctrine",
+          "Autonomy Stability Agent: continuously evaluates and reports alignment scores",
+          "BOSS Doctrinal Alignment dimension (weight 3.0): scores every action's doctrine fit",
+          "Doctrine versioning: every change is tagged, signed, and evidenced in Flight Recorder"
+        ],
+        "boss_dimension": "doctrinal_alignment"
+      },
+      "agt_runtime_enforcement": {
+        "packages": ["agent-lightning"],
+        "mechanism": "Agent Lightning (optional, for RL-enabled deployments) enforces training boundaries preventing reinforcement learning from optimizing toward misaligned reward signals. RL boundary policy set to 'strict' prevents value drift during model updates.",
+        "deployment_config": "agentLightning values: enabled (set true for RL deployments), rlBoundaryPolicy: strict",
+        "optional_note": "Agent Lightning is only required for deployments with RL-trained agents. ADAM's drift detection (CORE Engine + Autonomy Stability Agent) operates independently of Agent Lightning."
+      },
+      "combined_posture": "Architectural drift measurement (CORE Engine DriftRecord + BOSS Doctrinal Alignment) + Proactive detection (Autonomy Stability Agent) + RL boundary enforcement (Agent Lightning, optional)"
+    }
+  ]
+}
