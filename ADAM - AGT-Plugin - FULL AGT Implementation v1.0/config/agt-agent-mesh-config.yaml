@@ -1,0 +1,387 @@
+# AGT Agent Mesh Configuration
+# Integration with ADAM's 81-Agent Mesh topology
+# Cryptographic identity, trust scoring, and inter-agent communication
+# Updated: 2026-04-11
+
+# Agent Mesh: Foundation of distributed agent trust and identity
+# AGT's Agent Mesh package provides cryptographic identity and trust protocols
+# This config aligns it with ADAM's 5-layer agent topology (Intent, Governor Agent,
+# Orchestration, Work Group, Digital Twin) across 81 distinct agent classes
+agentMesh:
+  enabled: true
+
+  # Overall mesh topology configuration
+  topology:
+    # Total agent count across all layers (typically 81 for ADAM)
+    expectedAgentCount: 81
+
+    # Mesh layers corresponding to ADAM's 5-layer architecture
+    layers:
+      - layerId: "intent-layer"
+        layerName: "Intent/Human Interface Layer"
+        agentCount: 5
+        purpose: "Intent capture, user interaction, request origination"
+        communicationPattern: "hub-spoke"
+
+      - layerId: "governor-agent-layer"
+        layerName: "Governor Agents (Domain Governance)"
+        agentCount: 12
+        purpose: "Domain-specific policy enforcement and orchestration"
+        communicationPattern: "mesh"
+
+      - layerId: "orchestration-layer"
+        layerName: "Orchestration Layer"
+        agentCount: 24
+        purpose: "Request routing, saga coordination, exception handling"
+        communicationPattern: "mesh"
+
+      - layerId: "workgroup-layer"
+        layerName: "Work Group Agents"
+        agentCount: 32
+        purpose: "Domain-specific task execution and work coordination"
+        communicationPattern: "mesh"
+
+      - layerId: "digital-twin-layer"
+        layerName: "Digital Twins/Meta-Governance"
+        agentCount: 8
+        purpose: "System monitoring, policy meta-governance, self-optimization"
+        communicationPattern: "hub-spoke"
+
+  # Decentralized Identity (DID) configuration for agents
+  # DIDs provide verifiable, globally unique identities for each agent
+  decentralizedIdentity:
+    enabled: true
+
+    # DID method: "did:adam" is custom for ADAM ecosystem
+    didMethod: "did:adam"
+
+    # DID document registry endpoint
+    registryEndpoint: "https://did-registry.adam-governance.io/api/v1"
+
+    # DID document structure template for each agent
+    didDocumentTemplate:
+      context:
+        - "https://www.w3.org/ns/did/v1"
+        - "https://adam-governance.io/contexts/adam-v0.4"
+      id: "did:adam:{agentId}"
+      # Public keys for agent verification
+      verificationMethod:
+        - id: "#key-ed25519-signing"
+          type: "Ed25519VerificationKey2020"
+          controller: "did:adam:{agentId}"
+          publicKeyMultibase: "{publicKeyValue}"
+        - id: "#key-x25519-encryption"
+          type: "X25519KeyAgreementKey2020"
+          controller: "did:adam:{agentId}"
+          publicKeyMultibase: "{publicKeyValue}"
+      # Service endpoints for agent-to-agent communication
+      service:
+        - id: "#mesh-endpoint"
+          type: "MeshCommunicationService"
+          serviceEndpoint: "grpc://{agentHost}:{agentPort}"
+        - id: "#policy-endpoint"
+          type: "PolicyEnforcementService"
+          serviceEndpoint: "grpc://{agentHost}:{policyPort}"
+
+    # DID resolution caching
+    resolutionCache:
+      enabled: true
+      ttl: 3600  # Cache for 1 hour
+      size: 10000  # Max DIDs to cache
+
+  # Cryptographic key management for agents
+  # Each agent has signing keys (Ed25519) and encryption keys (X25519)
+  keyManagement:
+    enabled: true
+
+    # Key generation algorithm
+    signingAlgorithm: "Ed25519"
+    encryptionAlgorithm: "X25519"
+
+    # Key storage backend
+    keyStore:
+      type: "vault"  # HashiCorp Vault
+      endpoint: "https://vault.adam-governance.svc.cluster.local:8200"
+      authentication:
+        type: "kubernetes"
+        role: "adam-agents"
+      secretPath: "/secret/adam/agent-keys/"
+      # Automatic key rotation
+      rotationEnabled: true
+      rotationIntervalDays: 90
+
+    # Root of trust anchoring
+    rootOfTrust:
+      # Root CA certificate for signing all agent certificates
+      rootCACert: "/etc/adam-agents/ca.crt"
+      # Intermediate CA for agent certificates
+      intermediateCACert: "/etc/adam-agents/intermediate-ca.crt"
+
+    # Key derivation from root entropy
+    keyDerivation:
+      enabled: true
+      # Derive per-layer keys from master seed
+      derivePerLayer: true
+      # Derive per-agent keys from layer keys
+      derivePerAgent: true
+      # HKDF-SHA256 for key derivation
+      kdf: "HKDF-SHA256"
+
+  # Inter-Agent Trust Protocol (IATP)
+  # Defines how agents verify each other and establish trust relationships
+  interAgentTrustProtocol:
+    enabled: true
+
+    # Trust handshake: how agents verify each other on first contact
+    handshake:
+      # Protocol version
+      version: "1.0"
+      # Timeout for handshake completion (seconds)
+      timeout: 10
+      # Maximum attempts before failure
+      maxAttempts: 3
+      # Verify DID of peer agent
+      verifyPeerDid: true
+      # Verify cryptographic signature on first message
+      verifyInitialSignature: true
+
+    # Trust scoring: continuous evaluation of agent trustworthiness
+    trustScoring:
+      enabled: true
+      # Use continuous trust scores (0-1000 scale)
+      scoreScale: 1000
+
+      # Factors affecting trust score
+      scoringFactors:
+        - factor: "communication-latency"
+          weight: 0.05
+          lowerBetter: true
+        - factor: "policy-compliance-rate"
+          weight: 0.25
+          lowerBetter: false
+        - factor: "error-rate"
+          weight: 0.10
+          lowerBetter: true
+        - factor: "audit-log-anomalies"
+          weight: 0.15
+          lowerBetter: true
+        - factor: "request-timeout-rate"
+          weight: 0.10
+          lowerBetter: true
+        - factor: "cryptographic-verification-failures"
+          weight: 0.15
+          lowerBetter: true
+        - factor: "security-incident-history"
+          weight: 0.20
+          lowerBetter: true
+
+      # Mapping trust scores to ADAM authority levels
+      authorityLevelMapping:
+        - scoreRange: [0, 100]
+          authorityLevel: "QUARANTINED"
+          restrictions: ["no-new-requests", "read-only-access"]
+        - scoreRange: [101, 300]
+          authorityLevel: "RESTRICTED"
+          restrictions: ["limited-scope", "requires-approval"]
+        - scoreRange: [301, 600]
+          authorityLevel: "STANDARD"
+          restrictions: []
+        - scoreRange: [601, 800]
+          authorityLevel: "ELEVATED"
+          restrictions: []
+        - scoreRange: [801, 1000]
+          authorityLevel: "TRUSTED"
+          restrictions: []
+
+      # Trust score decay (reduce score over time for stale agents)
+      decayEnabled: true
+      decayRate: 0.01  # 1% per day
+      decayFloor: 100  # Never drop below 100
+
+    # Trust revocation: immediately drop trust if conditions violated
+    revocation:
+      enabled: true
+      # Immediate revocation conditions
+      revokeIf:
+        - "cryptographic-key-compromise"
+        - "policy-violation-critical"
+        - "multiple-authentication-failures"
+        - "security-incident-involvement"
+      # Revocation grace period (seconds)
+      gracePeriod: 0
+
+  # mTLS (mutual TLS) configuration for agent-to-agent communication
+  mtls:
+    enabled: true
+
+    # TLS version
+    tlsVersion: "1.3"
+
+    # Certificate validation
+    certificateValidation:
+      enabled: true
+      verifyChain: true
+      checkRevocation: true
+      revocationCheckInterval: 3600  # Every hour
+
+    # Cipher suites (prioritized)
+    cipherSuites:
+      - "TLS_AES_256_GCM_SHA384"
+      - "TLS_CHACHA20_POLY1305_SHA256"
+      - "TLS_AES_128_GCM_SHA256"
+
+    # Certificate rotation for agents
+    certificateRotation:
+      enabled: true
+      rotationInterval: 2592000  # 30 days
+      renewalThreshold: 604800   # 7 days before expiry
+
+  # Agent-to-Agent (A2A) protocol configuration
+  # Defines the actual communication protocol for inter-agent messages
+  a2aProtocol:
+    enabled: true
+
+    # Primary protocol: gRPC with mTLS
+    primaryProtocol: "grpc"
+    grpcConfig:
+      version: "1.0"
+      # Keep-alive for long-lived connections
+      keepAliveTime: 30  # seconds
+      keepAliveTimeout: 10
+      maxIdleTime: 300
+      # Connection pooling
+      connectionPoolSize: 100
+      # Message compression
+      compression: "gzip"
+
+    # Message format: Protobuf
+    messageFormat: "protobuf"
+
+    # Message authentication and encryption
+    messageProtection:
+      enabled: true
+      # Sign all messages with Ed25519
+      signMessages: true
+      # Encrypt message bodies with X25519 + ChaCha20-Poly1305
+      encryptPayload: true
+      # Include timestamps to prevent replay attacks
+      includeTimestamp: true
+      # Timestamp validation window (seconds)
+      timestampWindow: 300
+
+    # Message routing: how messages find their destination agent
+    routing:
+      type: "did-based"  # Use agent DIDs as routing identifiers
+      # Service discovery
+      serviceDiscovery:
+        type: "dns"
+        # DNS SRV records for agent location
+        recordType: "_adam-mesh._tcp"
+
+  # Network segmentation for security isolation
+  networkSegmentation:
+    enabled: true
+
+    # NetworkPolicy resources (Kubernetes)
+    kubernetesNetworkPolicy: true
+
+    # Segmentation by layer
+    layerSegmentation:
+      - layerId: "intent-layer"
+        allowFrom:
+          - "ingress-controller"
+          - "api-gateway"
+      - layerId: "governor-agent-layer"
+        allowFrom:
+          - "intent-layer"
+          - "orchestration-layer"
+      - layerId: "orchestration-layer"
+        allowFrom:
+          - "governor-agent-layer"
+          - "intent-layer"
+          - "workgroup-layer"
+      - layerId: "workgroup-layer"
+        allowFrom:
+          - "orchestration-layer"
+          - "digital-twin-layer"
+      - layerId: "digital-twin-layer"
+        allowFrom:
+          - "*"  # Meta-governance sees all
+
+  # Mesh observability and diagnostics
+  observability:
+    enabled: true
+
+    # Trace all inter-agent communications
+    tracing: true
+    # Sample rate for traces (0.0-1.0)
+    tracingSampleRate: 0.1
+
+    # Metrics for mesh health
+    metrics:
+      enabled: true
+      # Track message latencies
+      trackLatency: true
+      # Track trust scores
+      trackTrustScores: true
+      # Export metrics to Prometheus
+      exportFormat: "prometheus"
+      exportInterval: 30
+
+    # Health check for mesh connectivity
+    meshHealthCheck:
+      enabled: true
+      # Probe agents periodically
+      probeInterval: 60
+      # Timeout for probe response
+      probeTimeout: 5
+      # Mark agent unhealthy after N failures
+      failureThreshold: 3
+
+  # Chaos engineering for mesh resilience testing
+  chaosEngineering:
+    enabled: false  # Enable for testing, disable in production
+    scenarios:
+      - name: "latency-injection"
+        enabled: false
+        delay: 100  # milliseconds
+        probability: 0.01  # 1% of messages
+      - name: "packet-loss"
+        enabled: false
+        lossRate: 0.001  # 0.1% loss
+      - name: "agent-partition"
+        enabled: false
+        partitionDuration: 60  # seconds
+
+# Mesh initialization and bootstrap
+bootstrap:
+  # Bootstrap agents when mesh starts
+  bootstrapEnabled: true
+  # Order of bootstrap (layer-by-layer)
+  bootstrapOrder:
+    - "digital-twin-layer"
+    - "governor-agent-layer"
+    - "orchestration-layer"
+    - "workgroup-layer"
+    - "intent-layer"
+  # Wait for all agents to be ready before starting
+  waitForReadiness: true
+  # Timeout for bootstrap completion (seconds)
+  bootstrapTimeout: 300
+
+# Backup and disaster recovery for mesh state
+disasterRecovery:
+  enabled: true
+  # Backup mesh state to persist agent identities and trust scores
+  backupEnabled: true
+  # Backup frequency
+  backupInterval: 3600  # Every hour
+  # Backup storage
+  backupStorage:
+    type: "s3"
+    bucket: "adam-mesh-backups"
+    region: "us-east-1"
+    prefix: "mesh-state/"
+    encryption: "AES256"
+  # Restore mesh from backup if needed
+  restoreOnStartup: false

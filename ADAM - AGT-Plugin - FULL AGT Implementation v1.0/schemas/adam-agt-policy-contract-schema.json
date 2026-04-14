@@ -1,0 +1,631 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ADAM-AGT Policy Contract Schema",
+  "description": "Schema for policy contracts that bridge AGT Agent OS policy format with ADAM's invocation contract model. Integrates policy provenance, BOSS thresholds, autonomy budget checks, and AGT enforcement metadata.",
+  "type": "object",
+  "required": [
+    "contractId",
+    "version",
+    "policySource",
+    "effectiveDate",
+    "enforcementMode",
+    "bossThresholds"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema version"
+    },
+    "contractId": {
+      "type": "string",
+      "description": "Unique identifier for this policy contract",
+      "pattern": "^policy-contract-[a-zA-Z0-9-]+$"
+    },
+    "contractName": {
+      "type": "string",
+      "description": "Human-readable name of policy contract"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of policy contract",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of policy contract intent and scope"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when contract was created"
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "DID or identifier of creator"
+    },
+    "effectiveDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When policy contract becomes effective"
+    },
+    "expirationDate": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When policy contract expires (null = no expiration)"
+    },
+    "policySource": {
+      "type": "object",
+      "description": "Source and provenance of this policy",
+      "required": ["sourceType", "sourceId"],
+      "properties": {
+        "sourceType": {
+          "type": "string",
+          "description": "Type of policy source",
+          "enum": [
+            "adam-core",
+            "regulatory-framework",
+            "domain-governance",
+            "exception-economy",
+            "ai-generated",
+            "manual-override"
+          ]
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "ID of policy source (repository, framework, etc)"
+        },
+        "sourceVersion": {
+          "type": "string",
+          "description": "Version of source policy or framework"
+        },
+        "derivedFrom": {
+          "type": "array",
+          "description": "Parent policies this contract is derived from",
+          "items": {
+            "type": "object",
+            "properties": {
+              "parentContractId": {"type": "string"},
+              "parentVersion": {"type": "string"},
+              "relationship": {
+                "type": "string",
+                "enum": ["extends", "overrides", "refines", "combines"]
+              }
+            }
+          }
+        },
+        "regulatoryFramework": {
+          "type": "string",
+          "description": "Regulatory framework this policy aligns with",
+          "enum": [
+            "eu-ai-act",
+            "dora",
+            "nis2",
+            "singapore-imda",
+            "hipaa",
+            "soc2",
+            "internal-policy"
+          ]
+        },
+        "complianceObligation": {
+          "type": "string",
+          "description": "Specific compliance obligation this policy addresses"
+        }
+      }
+    },
+    "policyFormat": {
+      "type": "object",
+      "description": "Format and language of policy specification",
+      "required": ["language"],
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Policy language",
+          "enum": ["yaml", "opa-rego", "cedar", "json"]
+        },
+        "languageVersion": {
+          "type": "string"
+        },
+        "dialect": {
+          "type": "string",
+          "description": "Specific dialect or variant"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "description": "The actual policy definition (format varies by language)",
+      "properties": {
+        "raw": {
+          "type": "string",
+          "description": "Raw policy source code"
+        },
+        "compiled": {
+          "type": "string",
+          "description": "Compiled/parsed policy in internal format"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Metadata about policy structure",
+          "properties": {
+            "rules": {
+              "type": "integer",
+              "description": "Number of rules in policy"
+            },
+            "conditions": {
+              "type": "integer",
+              "description": "Number of conditions"
+            },
+            "actions": {
+              "type": "array",
+              "description": "Possible actions this policy can trigger",
+              "items": {"type": "string"}
+            },
+            "complexity": {
+              "type": "string",
+              "enum": ["simple", "moderate", "complex"],
+              "description": "Policy complexity assessment"
+            }
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "description": "Scope of policy applicability",
+      "properties": {
+        "agentLayers": {
+          "type": "array",
+          "description": "ADAM agent layers this policy applies to",
+          "items": {
+            "type": "string",
+            "enum": [
+              "intent-layer",
+              "governor-agent-layer",
+              "orchestration-layer",
+              "workgroup-layer",
+              "digital-twin-layer",
+              "all"
+            ]
+          }
+        },
+        "agentTypes": {
+          "type": "array",
+          "description": "Specific agent types affected by this policy",
+          "items": {"type": "string"}
+        },
+        "domains": {
+          "type": "array",
+          "description": "Business domains this policy applies to",
+          "items": {"type": "string"}
+        },
+        "resources": {
+          "type": "array",
+          "description": "Specific resources/systems governed by this policy",
+          "items": {"type": "string"}
+        },
+        "actions": {
+          "type": "array",
+          "description": "Actions/operations governed by this policy",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "enforcementMode": {
+      "type": "string",
+      "description": "How strictly this policy is enforced",
+      "enum": ["audit", "warn", "block", "block-kill"],
+      "default": "block"
+    },
+    "enforcementTarget": {
+      "type": "string",
+      "description": "Where policy is enforced",
+      "enum": ["policy-gateway", "sidecar", "hybrid"],
+      "default": "policy-gateway"
+    },
+    "bossThresholds": {
+      "type": "object",
+      "description": "BOSS dimension thresholds that activate/escalate this policy",
+      "properties": {
+        "dimensionThresholds": {
+          "type": "object",
+          "description": "Per-dimension enforcement thresholds",
+          "properties": {
+            "security": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Security dimension threshold (triggers policy enforcement)"
+            },
+            "sovereignty": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "financial": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "regulatory": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "reputational": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "rights": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "doctrinal": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "compositeThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Average BOSS score threshold across all dimensions"
+        },
+        "killSwitchThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "BOSS score at which kill switch is triggered"
+        },
+        "escalationPath": {
+          "type": "array",
+          "description": "Escalation actions at different BOSS tiers",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bossTier": {
+                "type": "string",
+                "enum": ["SOAP", "MODERATE", "ELEVATED", "HIGH", "OHSHAT"]
+              },
+              "minScore": {
+                "type": "number"
+              },
+              "maxScore": {
+                "type": "number"
+              },
+              "enforcementModeOverride": {
+                "type": "string",
+                "enum": ["audit", "warn", "block", "block-kill"]
+              },
+              "escalationTarget": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "autonomyBudgetContract": {
+      "type": "object",
+      "description": "Autonomy budget implications of this policy",
+      "properties": {
+        "budgetRequired": {
+          "type": "boolean",
+          "description": "Whether this policy action requires autonomy budget"
+        },
+        "baseCost": {
+          "type": "number",
+          "description": "Base autonomy budget cost for policy decision"
+        },
+        "costMultiplierByBossTier": {
+          "type": "object",
+          "description": "Cost multiplier for each BOSS escalation tier",
+          "properties": {
+            "SOAP": {"type": "number", "example": 1.0},
+            "MODERATE": {"type": "number", "example": 1.5},
+            "ELEVATED": {"type": "number", "example": 2.0},
+            "HIGH": {"type": "number", "example": 3.0},
+            "OHSHAT": {"type": "number", "example": 5.0}
+          }
+        },
+        "escalationToExceptionEconomy": {
+          "type": "boolean",
+          "description": "Whether policy violations escalate to Exception Economy"
+        },
+        "budgetAllocation": {
+          "type": "object",
+          "description": "Autonomy budget allocation for agents under this policy",
+          "properties": {
+            "allocationMethod": {
+              "type": "string",
+              "enum": ["per-agent", "per-layer", "per-domain", "shared"]
+            },
+            "budgetPerPeriod": {
+              "type": "number",
+              "description": "Budget amount per time period"
+            },
+            "periodDuration": {
+              "type": "string",
+              "enum": ["minute", "hour", "day", "week", "month"]
+            },
+            "carryover": {
+              "type": "boolean",
+              "description": "Whether unused budget carries over to next period"
+            }
+          }
+        }
+      }
+    },
+    "enforcementHooks": {
+      "type": "object",
+      "description": "Integration points with ADAM's 4 enforcement hooks",
+      "properties": {
+        "preDecisionHook": {
+          "type": "object",
+          "description": "Policy evaluation before decision is made",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "validateBossScore": {"type": "boolean"},
+            "validateAutonomyBudget": {"type": "boolean"},
+            "validatePriorApprovals": {"type": "boolean"},
+            "checkPolicyConsistency": {"type": "boolean"},
+            "timeout": {
+              "type": "integer",
+              "description": "Maximum time for pre-decision evaluation (ms)"
+            }
+          }
+        },
+        "duringExecutionHook": {
+          "type": "object",
+          "description": "Policy monitoring during decision execution",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "monitorBossScoreChanges": {"type": "boolean"},
+            "checkAutonomyBudgetConsumption": {"type": "boolean"},
+            "checkResourceLimits": {"type": "boolean"},
+            "monitoringInterval": {
+              "type": "integer",
+              "description": "Monitoring interval (ms)"
+            }
+          }
+        },
+        "postCompletionHook": {
+          "type": "object",
+          "description": "Policy validation after decision completion",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "verifyOutcome": {"type": "boolean"},
+            "auditResults": {"type": "boolean"},
+            "recordToFlightRecorder": {"type": "boolean"},
+            "feedbackLoop": {"type": "boolean"}
+          }
+        },
+        "exceptionHandlingHook": {
+          "type": "object",
+          "description": "Exception handling and policy violations",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "escalateOnViolation": {"type": "boolean"},
+            "routeToExceptionEconomy": {"type": "boolean"},
+            "autoRecoveryEnabled": {"type": "boolean"},
+            "compenseOnFailure": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "agentOSMetadata": {
+      "type": "object",
+      "description": "AGT Agent OS specific enforcement metadata",
+      "properties": {
+        "policyId": {
+          "type": "string",
+          "description": "Policy ID in AGT Agent OS"
+        },
+        "policyVersion": {
+          "type": "string",
+          "description": "Policy version in AGT"
+        },
+        "compileTarget": {
+          "type": "string",
+          "description": "Target compilation format for AGT",
+          "enum": ["golang", "wasm", "native"]
+        },
+        "compilationTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "binaryHash": {
+          "type": "string",
+          "description": "SHA-256 hash of compiled policy binary"
+        },
+        "enforceLatency": {
+          "type": "number",
+          "description": "Expected enforcement latency (ms) based on complexity"
+        },
+        "enforcement": {
+          "type": "object",
+          "description": "Detailed enforcement configuration",
+          "properties": {
+            "cacheable": {
+              "type": "boolean",
+              "description": "Whether policy decisions can be cached"
+            },
+            "cacheTTL": {
+              "type": "integer",
+              "description": "Cache TTL if cacheable (ms)"
+            },
+            "parallelizable": {
+              "type": "boolean"
+            },
+            "idempotent": {
+              "type": "boolean"
+            },
+            "asyncEvaluation": {
+              "type": "boolean",
+              "description": "Whether policy evaluation can be async"
+            }
+          }
+        }
+      }
+    },
+    "testingAndValidation": {
+      "type": "object",
+      "description": "Testing requirements and validation status",
+      "properties": {
+        "unitTests": {
+          "type": "object",
+          "properties": {
+            "defined": {"type": "boolean"},
+            "passCount": {"type": "integer"},
+            "failCount": {"type": "integer"},
+            "lastRun": {"type": "string", "format": "date-time"}
+          }
+        },
+        "integrationTests": {
+          "type": "object",
+          "properties": {
+            "defined": {"type": "boolean"},
+            "scenarioCount": {"type": "integer"},
+            "lastRun": {"type": "string", "format": "date-time"}
+          }
+        },
+        "complianceTests": {
+          "type": "object",
+          "properties": {
+            "defined": {"type": "boolean"},
+            "frameworks": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "stagingValidation": {
+          "type": "boolean",
+          "description": "Whether policy has been validated in staging"
+        },
+        "lastValidated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validatedBy": {
+          "type": "string",
+          "description": "DID of validator"
+        }
+      }
+    },
+    "versionHistory": {
+      "type": "array",
+      "description": "History of policy contract versions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {"type": "string"},
+          "timestamp": {"type": "string", "format": "date-time"},
+          "createdBy": {"type": "string"},
+          "changes": {"type": "string"},
+          "rolloutStatus": {
+            "type": "string",
+            "enum": ["draft", "staging", "deployed", "superseded"]
+          }
+        }
+      }
+    },
+    "auditTrail": {
+      "type": "array",
+      "description": "Audit trail of policy contract changes and enforcement",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {"type": "string", "format": "date-time"},
+          "eventType": {
+            "type": "string",
+            "enum": ["created", "modified", "deployed", "enforced", "violated", "remediated"]
+          },
+          "actor": {"type": "string"},
+          "details": {"type": "string"}
+        }
+      }
+    },
+    "flightRecorderReference": {
+      "type": "object",
+      "description": "Reference to Flight Recorder evidence",
+      "properties": {
+        "contractDeploymentHash": {
+          "type": "string",
+          "description": "SHA-256 hash of deployment event"
+        },
+        "enforcementEntries": {
+          "type": "array",
+          "description": "Flight Recorder entries for policy enforcement",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entryHash": {"type": "string"},
+              "timestamp": {"type": "string", "format": "date-time"},
+              "enforced": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    },
+    "signatureAndVerification": {
+      "type": "object",
+      "description": "Cryptographic signature and verification",
+      "properties": {
+        "signature": {
+          "type": "string",
+          "description": "Ed25519 signature over contract"
+        },
+        "signedBy": {
+          "type": "string",
+          "description": "DID of signer"
+        },
+        "signatureTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["valid", "invalid", "expired"],
+          "description": "Current signature status"
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "contractId": "policy-contract-security-baseline-001",
+      "contractName": "Security Baseline Policy",
+      "version": "1.2.0",
+      "description": "Foundational security policy enforcing encryption and authentication",
+      "createdAt": "2026-04-01T10:00:00Z",
+      "createdBy": "did:adam:policy-admin-001",
+      "effectiveDate": "2026-04-01T10:00:00Z",
+      "policySource": {
+        "sourceType": "adam-core",
+        "sourceId": "core-policies-repo",
+        "regulatoryFramework": "eu-ai-act"
+      },
+      "policyFormat": {
+        "language": "yaml"
+      },
+      "enforcementMode": "block",
+      "bossThresholds": {
+        "dimensionThresholds": {
+          "security": 70,
+          "regulatory": 60
+        },
+        "killSwitchThreshold": 85
+      },
+      "autonomyBudgetContract": {
+        "budgetRequired": true,
+        "baseCost": 50,
+        "escalationToExceptionEconomy": true
+      }
+    }
+  ]
+}

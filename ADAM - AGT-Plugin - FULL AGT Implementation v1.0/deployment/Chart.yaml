@@ -1,0 +1,91 @@
+apiVersion: v2
+# ADAM-AGT Helm Chart Metadata
+# This chart deploys the ADAM-Agent Governance Toolkit (AGT) Plugin integration layer
+# across three deployment targets: Azure AKS (cloud), generic Kubernetes (hybrid), and Azure Local (sovereign)
+#
+# The AGT Plugin provides governance enforcement through 7 integrated packages:
+# 1. Agent OS: Policy engine and intent interpretation
+# 2. Agent Mesh: Cryptographic identity and zero-trust networking
+# 3. Agent Runtime: Execution ring enforcement (kernel, system, user rings)
+# 4. Agent SRE: Site Reliability Engineering and observability
+# 5. Agent Compliance: Regulatory compliance and audit trails
+# 6. Agent Marketplace: Plugin signing and artifact verification
+# 7. Agent Lightning: Reinforcement Learning governance and action optimization
+#
+# ADAM uses LangGraph for the agent framework and Cosmos DB Gremlin for the CORE Graph,
+# which is queried by the AGT policy engine for policy sync and governance decisions.
+
+name: adam-agt
+description: ADAM-Agent Governance Toolkit (AGT) Plugin - Kubernetes deployment integration
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# Chart metadata for book context
+metadata:
+  # This chart is part of the ADAM (Autonomy Doctrine & Architecture Model) book
+  # It demonstrates how governance infrastructure is deployed across cloud and sovereign environments
+  purpose: "Technical artifact demonstrating autonomous enterprise governance deployment"
+  context: "Book: ADAM - Autonomy Doctrine & Architecture Model v0.4"
+  author: "Michael Lamb"
+
+# Keywords for discovery and understanding
+keywords:
+  - autonomous-agents
+  - governance
+  - kubernetes
+  - helm
+  - policy-engine
+  - zero-trust-identity
+  - edge-computing
+  - sovereignty
+
+# Semantic versioning: MAJOR.MINOR.PATCH
+# 1.0.0 = Stable release for book publication
+# Breaking changes increment MAJOR; new features increment MINOR
+
+# Helm chart dependencies
+# The AGT Plugin depends on the core ADAM chart and specific Kubernetes versions
+dependencies:
+  # Optional: Reference to ADAM core chart (typically deployed separately)
+  # - name: adam-core
+  #   version: "^1.0.0"
+  #   repository: "https://example.com/charts"
+  #   condition: adamCore.enabled
+
+# Kubernetes API version compatibility
+# AGT Plugin requires Kubernetes 1.24+ for advanced RBAC, MutatingWebhooks, and Confidential Containers
+kubeVersion: ">=1.24.0"
+
+# Maintainer information
+maintainers:
+  - name: Michael Lamb
+    email: michael@example.com
+    url: https://example.com
+
+# Chart home page and sources
+home: https://example.com/adam-agt
+sources:
+  - https://github.com/example/adam-agt-plugin
+  - https://example.com/adam-book
+
+# Chart icon (base64 encoded SVG or URL)
+icon: https://example.com/adam-agt-icon.svg
+
+# License declaration
+license: Apache-2.0
+
+# Annotations for automation and documentation
+annotations:
+  # Artifact Hub annotations for discoverability
+  artifacthub.io/changes: |
+    - Initial 1.0.0 release with AGT Plugin integration across three deployment targets
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/recommendations: |
+    - Requires Azure Key Vault integration for AKS deployments
+    - Requires Cosmos DB Gremlin for CORE Graph policy synchronization
+    - Requires mTLS and mutual authentication between agent pods and AGT sidecars
+
+# Category classification
+category: governance

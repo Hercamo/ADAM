@@ -1,0 +1,549 @@
+# AGT Agent Compliance Configuration
+# Integration with ADAM's regulatory framework and BOSS scoring
+# EU AI Act, DORA, NIS2, Singapore IMDA, HIPAA, SOC2 compliance mapping
+# Updated: 2026-04-11
+
+# Agent Compliance: Regulatory compliance for autonomous agents
+# AGT's Agent Compliance package provides automated compliance mapping,
+# regulatory framework alignment, and audit report generation
+agentCompliance:
+  enabled: true
+
+  # Regulatory frameworks to enforce
+  frameworks:
+    enabled: true
+
+    # EU AI Act: AI systems subject to EU regulatory requirements
+    euAiAct:
+      enabled: true
+      version: "2024"
+      applicableTo:
+        - "eu-jurisdiction"
+        - "processing-eu-resident-data"
+
+      # Risk classification (ADAM BOSS score to EU AI Act risk tier)
+      riskClassification:
+        # Prohibited risks: banned AI systems
+        prohibited:
+          bossDimensions:
+            - "security"
+            - "sovereignty"
+            - "rights"
+          bossThreshold: 85  # OHSHAT-adjacent
+          requirements:
+            - "no-deployment"
+            - "escalate-to-legal"
+
+        # High-risk systems
+        highRisk:
+          bossDimensions:
+            - "security"
+            - "regulatory"
+            - "rights"
+          bossThreshold: 60
+          requirements:
+            - "conformity-assessment"
+            - "technical-documentation"
+            - "quality-management-system"
+            - "risk-assessment"
+            - "human-oversight-procedures"
+            - "post-market-surveillance"
+            - "compliance-log-maintenance"
+
+        # Limited-risk systems
+        limitedRisk:
+          bossDimensions: ["regulatory"]
+          bossThreshold: 40
+          requirements:
+            - "transparency-obligations"
+            - "user-information"
+            - "record-keeping"
+
+        # Minimal-risk systems
+        minimalRisk:
+          bossDimensions: []
+          bossThreshold: 20
+          requirements: []
+
+      # Compliance checks
+      complianceChecks:
+        - "ai-system-documentation-complete"
+        - "conformity-assessment-current"
+        - "human-oversight-enabled"
+        - "post-market-surveillance-active"
+        - "incident-reporting-configured"
+
+      # Audit frequency
+      auditFrequency: "quarterly"
+
+    # DORA (Digital Operational Resilience Act): Operational resilience for financial institutions
+    dora:
+      enabled: true
+      version: "2024"
+      applicableTo:
+        - "financial-sector"
+        - "payment-services"
+
+      # ICT risk management framework
+      ictRiskManagement:
+        # ICT risk tolerance
+        ictRiskTolerance:
+          # Mapped to ADAM BOSS score
+          maxAcceptableBossScore: 70
+          criticalTierActivation: 75
+        # ICT risk monitoring
+        monitoring:
+          enabled: true
+          interval: 3600  # Hourly
+        # Incident reporting to regulators
+        incidentReporting:
+          enabled: true
+          # Report to competent authority
+          reportToRegulator: true
+          # Timeline: 72 hours for serious incidents
+          reportingDeadlineHours: 72
+
+      # Third-party risk management
+      thirdPartyRisk:
+        enabled: true
+        # Assess agent service providers (if applicable)
+        dueDialigence: true
+        # Contractual requirements
+        contractualRequirements:
+          - "sla-compliance"
+          - "audit-rights"
+          - "incident-reporting"
+          - "data-protection"
+
+      # Testing and resilience
+      testing:
+        enabled: true
+        # Adversarial resilience testing (DORA)
+        adversarialTesting: true
+        testFrequency: "annual"
+        # Cyber resilience policy
+        cyberResiliencePolicy: true
+
+      # Compliance checks
+      complianceChecks:
+        - "ict-risk-framework-defined"
+        - "incident-reporting-process"
+        - "third-party-risk-assessment"
+        - "audit-trail-maintained"
+        - "testing-schedule-active"
+
+      # Audit frequency
+      auditFrequency: "annually"
+
+    # NIS2 (Network and Information Security Directive 2): Cybersecurity for critical infrastructure
+    nis2:
+      enabled: true
+      version: "2024"
+      applicableTo:
+        - "critical-infrastructure"
+        - "essential-services"
+        - "digital-service-providers"
+
+      # Security measures aligned to ADAM BOSS
+      securityMeasures:
+        # Security and governance
+        governance:
+          requirements:
+            - "information-security-policy"
+            - "incident-response-plan"
+            - "business-continuity-plan"
+            - "supplier-security-assessment"
+
+        # Cybersecurity risk management
+        riskManagement:
+          enabled: true
+          # Risk assessment frequency
+          assessmentFrequency: "annual"
+          # Risk threshold to BOSS mapping
+          riskToBoysMapping:
+            critical: 85
+            high: 65
+            medium: 45
+            low: 25
+
+        # Technical measures
+        technical:
+          requirements:
+            - "access-control"
+            - "encryption"
+            - "backup-and-recovery"
+            - "network-segmentation"
+            - "intrusion-detection"
+            - "logging-and-monitoring"
+
+        # Organizational measures
+        organizational:
+          requirements:
+            - "security-training"
+            - "incident-handling"
+            - "supply-chain-security"
+            - "security-incident-reporting"
+
+      # Reporting to authorities
+      incidentReporting:
+        enabled: true
+        # Serious incidents to NIS2 authorities
+        reportingDeadline: 72  # hours
+        notificationChannels:
+          - "competent-authority"
+          - "CSIRT"
+          - "affected-parties"
+
+      # Compliance checks
+      complianceChecks:
+        - "security-policy-current"
+        - "incident-response-tested"
+        - "encryption-enforced"
+        - "access-controls-verified"
+        - "incident-reporting-active"
+
+      # Audit frequency
+      auditFrequency: "annual"
+
+    # Singapore IMDA (Info-communications Media Development Authority): Singapore AI governance
+    singaporeIMDA:
+      enabled: false  # Enable if operating in Singapore
+      version: "2024"
+      applicableTo:
+        - "singapore-jurisdiction"
+        - "serving-singapore-users"
+
+      # Model AI Governance Framework
+      aiGovernance:
+        enabled: true
+        # Accountability and transparency
+        accountability:
+          requirements:
+            - "responsible-ai-officer"
+            - "ai-governance-framework"
+            - "documented-ai-use-cases"
+            - "stakeholder-engagement"
+
+        # Risk management aligned to ADAM BOSS
+        riskManagement:
+          enabled: true
+          bossMapping: true
+          # Regular audits
+          auditFrequency: "biannual"
+
+      # Compliance checks
+      complianceChecks:
+        - "responsible-ai-officer-appointed"
+        - "governance-framework-documented"
+        - "transparency-measures-active"
+
+      # Audit frequency
+      auditFrequency: "annual"
+
+    # HIPAA (Health Insurance Portability and Accountability Act): Healthcare data protection
+    hipaa:
+      enabled: false  # Enable if handling PHI (Protected Health Information)
+      version: "2024"
+      applicableTo:
+        - "healthcare-sector"
+        - "handling-phi"
+
+      # Security Rule requirements
+      securityRule:
+        enabled: true
+        # Administrative safeguards
+        administrativeSafeguards:
+          requirements:
+            - "security-management-process"
+            - "assigned-security-responsibility"
+            - "workforce-security"
+            - "information-access-management"
+            - "security-awareness-and-training"
+            - "security-incident-procedures"
+            - "contingency-planning"
+
+        # Physical safeguards
+        physicalSafeguards:
+          requirements:
+            - "facility-access-controls"
+            - "workstation-use-procedures"
+            - "workstation-security"
+            - "device-and-media-controls"
+
+        # Technical safeguards
+        technicalSafeguards:
+          requirements:
+            - "access-controls"
+            - "audit-controls"
+            - "integrity-controls"
+            - "transmission-security"
+
+      # Privacy Rule requirements
+      privacyRule:
+        enabled: true
+        requirements:
+          - "notice-of-privacy-practices"
+          - "patient-authorization-procedures"
+          - "accounting-of-disclosures"
+
+      # Breach Notification Rule
+      breachNotification:
+        enabled: true
+        # Breach notification timeline
+        notificationDeadline: 60  # days
+
+      # Compliance checks
+      complianceChecks:
+        - "encryption-of-phi"
+        - "access-controls-enforced"
+        - "audit-log-maintained"
+        - "breach-notification-process"
+        - "business-associate-agreements"
+
+      # Audit frequency
+      auditFrequency: "annual"
+
+    # SOC2: Service Organization Control audit requirements
+    soc2:
+      enabled: true
+      version: "2024"
+      applicableTo:
+        - "service-providers"
+        - "cloud-services"
+
+      # Trust Service Criteria (TSC)
+      trustServiceCriteria:
+        # Security criterion
+        security:
+          enabled: true
+          requirements:
+            - "risk-management-process"
+            - "access-controls"
+            - "encryption"
+            - "incident-response"
+            - "vulnerability-management"
+            - "threat-intelligence"
+          bossMapping:
+            criticalRequirement: "security"
+            minAcceptableScore: 40
+
+        # Availability criterion
+        availability:
+          enabled: true
+          requirements:
+            - "uptime-targets"
+            - "disaster-recovery"
+            - "backup-procedures"
+            - "performance-monitoring"
+
+        # Processing integrity criterion
+        processingIntegrity:
+          enabled: true
+          requirements:
+            - "accuracy-and-completeness"
+            - "system-monitoring"
+            - "error-handling"
+
+        # Confidentiality criterion
+        confidentiality:
+          enabled: true
+          requirements:
+            - "data-classification"
+            - "access-restrictions"
+            - "encryption-in-transit"
+            - "encryption-at-rest"
+
+        # Privacy criterion
+        privacy:
+          enabled: true
+          requirements:
+            - "privacy-notice"
+            - "consent-management"
+            - "data-retention-policies"
+
+      # Audit type (Type I or Type II)
+      auditType: "TypeII"
+      # Audit frequency
+      auditFrequency: "annual"
+
+      # Compliance checks
+      complianceChecks:
+        - "security-controls-effective"
+        - "availability-slos-met"
+        - "data-integrity-verified"
+        - "access-controls-enforced"
+        - "privacy-procedures-active"
+
+  # BOSS Score dimension to compliance framework mapping
+  bossComplianceMapping:
+    enabled: true
+
+    # Security dimension -> specific frameworks
+    security:
+      frameworks:
+        - "eu-ai-act"
+        - "dora"
+        - "nis2"
+        - "hipaa"
+        - "soc2"
+      # BOSS score at dimension level triggers these checks
+      thresholdScore: 70
+      requiredControls:
+        - "encryption"
+        - "access-controls"
+        - "audit-logging"
+
+    # Sovereignty dimension -> regulatory frameworks
+    sovereignty:
+      frameworks:
+        - "eu-ai-act"
+        - "nis2"
+        - "singapore-imda"
+      thresholdScore: 70
+      requiredControls:
+        - "data-residency"
+        - "jurisdiction-compliance"
+        - "cross-border-transfer-controls"
+
+    # Financial dimension -> financial regulation
+    financial:
+      frameworks:
+        - "dora"
+        - "soc2"
+      thresholdScore: 75
+      requiredControls:
+        - "audit-trail"
+        - "financial-controls"
+        - "reporting"
+
+    # Regulatory dimension -> all frameworks
+    regulatory:
+      frameworks:
+        - "eu-ai-act"
+        - "dora"
+        - "nis2"
+        - "singapore-imda"
+        - "hipaa"
+        - "soc2"
+      thresholdScore: 50
+      requiredControls:
+        - "compliance-monitoring"
+        - "incident-reporting"
+        - "documentation"
+
+    # Rights dimension -> privacy and rights frameworks
+    rights:
+      frameworks:
+        - "eu-ai-act"
+        - "hipaa"
+        - "soc2-privacy"
+      thresholdScore: 65
+      requiredControls:
+        - "consent-management"
+        - "data-subject-rights"
+        - "privacy-by-design"
+
+  # Automated compliance checking
+  complianceChecking:
+    enabled: true
+
+    # Continuous compliance monitoring
+    continuousMonitoring:
+      enabled: true
+      # Check frequency (seconds)
+      checkInterval: 3600  # Hourly
+      # Alert on violations
+      alertOnViolation: true
+
+    # Compliance score calculation
+    complianceScore:
+      enabled: true
+      # Overall compliance percentage (0-100)
+      scale: 100
+      # Weights for each framework (if tracking multiple)
+      frameworkWeights:
+        euAiAct: 0.25
+        dora: 0.25
+        nis2: 0.25
+        hipaa: 0.15
+        soc2: 0.10
+      # Alert threshold: score below this triggers alerts
+      alertThreshold: 85
+
+    # Remediation tracking
+    remediation:
+      enabled: true
+      # Track non-conformities
+      trackNonConformities: true
+      # Auto-create remediation tickets
+      autoCreateTickets: true
+      # Remediation deadline
+      remediationDeadline: 2592000  # 30 days
+
+  # Automated audit report generation
+  auditReporting:
+    enabled: true
+
+    # Report types
+    reportTypes:
+      - name: "compliance-summary"
+        frequency: "monthly"
+        recipients:
+          - "compliance-officer"
+          - "legal"
+      - name: "regulatory-audit"
+        frequency: "quarterly"
+        recipients:
+          - "compliance-officer"
+          - "chief-legal-officer"
+          - "board"
+      - name: "incident-compliance-report"
+        frequency: "on-demand"
+        recipients:
+          - "compliance-officer"
+          - "chief-information-security-officer"
+
+    # Report contents
+    reportContents:
+      - "compliance-score-by-framework"
+      - "boss-score-to-compliance-mapping"
+      - "non-conformities-and-remediation"
+      - "audit-findings"
+      - "control-effectiveness-assessment"
+      - "recommendations"
+
+    # Report storage and distribution
+    distribution:
+      storageLocation: "s3://adam-compliance-reports/"
+      # Send reports via email
+      emailDistribution: true
+      # Archive for historical tracking
+      archiveReports: true
+      # Retention period (days)
+      retentionDays: 2555  # 7 years
+
+  # Integration with Flight Recorder
+  evidenceRecording:
+    enabled: true
+    # Record all compliance checks
+    recordComplianceChecks: true
+    # Record audit results
+    recordAuditResults: true
+    # Feed into Flight Recorder for immutable evidence trail
+    flightRecorderIntegration: true
+
+  # Compliance dashboard and metrics
+  observability:
+    enabled: true
+    dashboards:
+      - name: "Compliance-Overview"
+        metrics:
+          - "overall-compliance-score"
+          - "compliance-by-framework"
+          - "boss-dimension-compliance"
+          - "non-conformity-count"
+      - name: "Regulatory-Status"
+        metrics:
+          - "framework-status"
+          - "audit-readiness"
+          - "remediation-progress"

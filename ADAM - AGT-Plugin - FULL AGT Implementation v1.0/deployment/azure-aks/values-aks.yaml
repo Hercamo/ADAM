@@ -1,0 +1,917 @@
+# ============================================================================
+# ADAM-AGT Helm Values for Azure AKS (Azure Kubernetes Service) Deployment
+# ============================================================================
+#
+# This values file configures the ADAM-Agent Governance Toolkit (AGT) Plugin
+# for deployment on Azure AKS with full integration of Azure native services:
+# - Azure Key Vault for Ed25519 keypair storage (Agent Mesh cryptographic identity)
+# - Azure Confidential Ledger for Flight Recorder audit trail
+# - Azure Monitor for Agent SRE observability
+# - Cosmos DB Gremlin for CORE Graph policy sync
+#
+# AGT provides 7 integrated governance packages as sidecar containers:
+# 1. Agent OS: Policy engine (reads CORE Graph for intent/policy decisions)
+# 2. Agent Mesh: Cryptographic identity provider (Ed25519, mTLS, zero-trust)
+# 3. Agent Runtime: Execution ring enforcement (kernel, system, user rings)
+# 4. Agent SRE: Site Reliability Engineering (metrics, tracing, alerting)
+# 5. Agent Compliance: Regulatory compliance and audit trails
+# 6. Agent Marketplace: Plugin signing and artifact verification
+# 7. Agent Lightning: Reinforcement Learning-based governance and action optimization
+#
+# Deployment targets agents using LangGraph framework on Kubernetes 1.24+
+
+# ============================================================================
+# GLOBAL DEPLOYMENT CONFIGURATION
+# ============================================================================
+
+global:
+  # Deployment environment identifier
+  environment: production
+
+  # Azure region for regional resource placement
+  # AKS cluster must be in this region for optimal latency
+  region: eastus
+
+  # Kubernetes cluster name (used for resource tagging and identification)
+  clusterName: adam-aks-cluster
+
+  # Image registry for AGT sidecar containers
+  # Images are pulled from this registry for all 7 AGT packages
+  registry:
+    name: adamagtregistry.azurecr.io
+    # Authentication secret in adam-agt namespace
+    imagePullSecrets: adam-acr-credentials
+    # Image pull policy: IfNotPresent for production (requires pre-pulled images)
+    # Use Always for development with image tag 'latest'
+    pullPolicy: IfNotPresent
+
+  # Label selectors for determining which pods get AGT sidecar injection
+  # Pods in namespaces with label "governance-injectable: true" receive sidecars
+  podSelector:
+    labels:
+      governance-injectable: "true"
+
+# ============================================================================
+# AZURE-SPECIFIC CONFIGURATION
+# ============================================================================
+
+azure:
+  # Azure tenant ID for Workload Identity and managed identity authentication
+  tenantId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+  # Azure subscription ID
+  subscriptionId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+  # Azure resource group containing AKS cluster
+  resourceGroup: adam-rg
+
+  # Azure Key Vault configuration for cryptographic key storage
+  # Agent Mesh sidecars retrieve Ed25519 private keys from this vault
+  keyVault:
+    # Vault name (must be globally unique across Azure)
+    name: adam-agt-kv
+
+    # Enable Azure RBAC for Key Vault access (modern approach)
+    enableRbac: true
+
+    # Key Vault secret references for AGT sidecars
+    secrets:
+      # Ed25519 keypair for Agent Mesh cryptographic identity
+      agentMeshPrivateKey: adam-agt-mesh-ed25519-key
+      agentMeshPublicKey: adam-agt-mesh-ed25519-pub
+
+      # TLS certificates for mTLS between agent and AGT sidecar
+      agentSidecarTlsCert: adam-agt-sidecar-tls-cert
+      agentSidecarTlsKey: adam-agt-sidecar-tls-key
+      agentSidecarCaCert: adam-agt-sidecar-ca-cert
+
+      # Cosmos DB connection string for CORE Graph access
+      cosmoDbConnectionString: adam-cosmos-db-conn-str
+
+      # Flight Recorder signing key for Azure Confidential Ledger
+      flightRecorderSigningKey: adam-flight-recorder-signing-key
+
+  # Azure Managed Identity for Workload Identity (OIDC-based authentication)
+  # Allows AGT pods to authenticate to Azure services without credentials in secrets
+  managedIdentity:
+    # Enable Workload Identity federation
+    enabled: true
+
+    # Client ID of the managed identity
+    clientId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+    # Resource ID of the managed identity
+    resourceId: "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroup}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/adam-agt-mi"
+
+    # Federated identity credential for OIDC (created separately in Azure)
+    # Links the Kubernetes ServiceAccount to the Managed Identity
+    oidcIssuer: "https://eastus.oic.prod-aks.azure.com/{clusterOIDCHash}/"
+
+  # Azure Confidential Ledger for Flight Recorder (immutable audit trail)
+  # Flight Recorder stores all policy enforcement decisions, agent actions, and governance events
+  confidentialLedger:
+    # Enable Azure Confidential Ledger integration for Flight Recorder
+    enabled: true
+
+    # Ledger name (user-friendly identifier)
+    name: adam-agt-flight-recorder
+
+    # Ledger endpoint URI
+    uri: "https://adam-agt-flight-recorder.eastus.cloudledger.azure.com"
+
+    # Signing certificate thumbprint for ledger writes
+    signingCertThumbprint: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+  # Azure Monitor integration for Agent SRE (observability and alerting)
+  monitor:
+    # Enable Azure Monitor integration
+    enabled: true
+
+    # Application Insights instrumentation key
+    appInsightsKey: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+    # Log Analytics workspace ID
+    workspaceId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+    # Custom metrics namespace for ADAM AGT metrics
+    metricsNamespace: "ADAM.AGT"
+
+    # Metrics dimensions (tags) for all metrics
+    metricsDimensions:
+      cluster: adam-aks-cluster
+      governance-layer: agent-governance-toolkit
+
+# ============================================================================
+# COSMOS DB GREMLIN CONFIGURATION (CORE Graph Policy Database)
+# ============================================================================
+
+cosmosDb:
+  # Enable Cosmos DB Gremlin integration for CORE Graph policy synchronization
+  enabled: true
+
+  # Cosmos DB account name
+  accountName: adam-cosmos-agt
+
+  # Cosmos DB endpoint (automatically resolved if not specified)
+  endpoint: "https://adam-cosmos-agt.documents.azure.com:443/"
+
+  # Cosmos DB Gremlin database configuration
+  database:
+    # Database name for CORE Graph policies
+    name: adam-core-graph
+
+    # Initial request units (RUs) - scales based on policy load
+    # 400 RUs = ~400 policy query operations per second
+    # Production deployments should use autoscale (max 4000 RU/s)
+    throughput: 400
+
+    # Autoscale settings for dynamic throughput adjustment
+    autoscale:
+      enabled: true
+      maxThroughput: 4000
+
+  # Gremlin collection configuration
+  collection:
+    # Collection name for policy vertices and edges
+    name: policies
+
+    # Partition key path for policy distribution across partitions
+    # Policies partitioned by agent ID for locality optimization
+    partitionKey: /agentId
+
+  # Connection pooling and retry configuration
+  connection:
+    # Connection timeout in seconds
+    timeout: 10
+
+    # Maximum connection pool size
+    maxPoolSize: 100
+
+    # Retry policy for transient failures
+    retryPolicy:
+      # Maximum retry attempts
+      maxRetries: 3
+
+      # Initial backoff in milliseconds
+      initialBackoffMs: 100
+
+      # Backoff multiplier for exponential backoff
+      backoffMultiplier: 2.0
+
+  # Consistency level for policy reads
+  # "Eventual" for high-throughput, "Strong" for strict consistency
+  consistencyLevel: "BoundedStaleness"
+
+  # Max staleness (for BoundedStaleness)
+  # Policies won't be more than 10 seconds or 1000 operations out of date
+  maxStaleness:
+    timeIntervalInSeconds: 10
+    maxOperations: 1000
+
+# ============================================================================
+# AGT SIDECAR INJECTION CONFIGURATION
+# ============================================================================
+
+sidecarInjection:
+  # Enable automatic sidecar injection via MutatingWebhookConfiguration
+  enabled: true
+
+  # Webhook namespace isolation
+  webhookNamespace: adam-agt
+
+  # Sidecar injection mode
+  # "always": inject all pods in selected namespaces
+  # "selective": only inject pods with label "inject-agt-sidecar: true"
+  mode: "selective"
+
+  # Pod label selector for injection (if mode is "selective")
+  podSelector:
+    matchLabels:
+      inject-agt-sidecar: "true"
+
+  # Namespace selector for injection
+  namespaceSelector:
+    matchLabels:
+      governance-injectable: "true"
+
+  # Failure policy if webhook is unavailable
+  # "Ignore" = pod created without sidecar; "Fail" = pod creation fails
+  failurePolicy: "Ignore"
+
+  # Timeout for webhook response
+  timeoutSeconds: 30
+
+# ============================================================================
+# AGENT OS PACKAGE (Policy Engine)
+# ============================================================================
+
+agentOs:
+  # Agent OS sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-os
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent OS policy enforcement
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  # Security context for Agent OS container
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for Agent OS policy query API
+  port: 9001
+
+  # Liveness probe (restarts container if unresponsive)
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9001
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  # Readiness probe (removes from service if not ready)
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9001
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # Volume mounts for Agent OS
+  volumeMounts:
+    # Policy configuration from ConfigMap
+    - name: policy-config
+      mountPath: /etc/adam-agt/policies
+      readOnly: true
+
+    # CORE Graph cache from ConfigMap
+    - name: core-graph-cache
+      mountPath: /var/cache/adam-agt/core-graph
+      readOnly: true
+
+    # Temporary directory for working files
+    - name: tmp-volume
+      mountPath: /tmp
+
+  # Environment variables for Agent OS
+  env:
+    # Policy sync interval (seconds) - how often to check CORE Graph
+    - name: POLICY_SYNC_INTERVAL_SECONDS
+      value: "30"
+
+    # Cosmos DB endpoint (from Kubernetes secret)
+    - name: COSMOS_DB_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: adam-agt-cosmos-db
+          key: endpoint
+
+    # Policy evaluation mode
+    # "strict" = deny by default; "audit" = log violations only
+    - name: POLICY_MODE
+      value: "strict"
+
+    # Log level for Agent OS diagnostics
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT MESH PACKAGE (Cryptographic Identity & Zero-Trust Networking)
+# ============================================================================
+
+agentMesh:
+  # Agent Mesh sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-mesh
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent Mesh identity provider
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+  # Security context for Agent Mesh container
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for Agent Mesh identity API
+  port: 9002
+
+  # Port for mTLS proxy (between agent pod and external services)
+  mtlsProxyPort: 8443
+
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9002
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9002
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # Volume mounts for Agent Mesh
+  volumeMounts:
+    # Ed25519 keypair from Key Vault (via SecretProvider)
+    - name: agt-identity-keys
+      mountPath: /etc/adam-agt/identity/keys
+      readOnly: true
+
+    # mTLS certificates
+    - name: agt-mesh-tls
+      mountPath: /etc/adam-agt/mesh/tls
+      readOnly: true
+
+    # Temporary directory
+    - name: tmp-volume
+      mountPath: /tmp
+
+  # Environment variables for Agent Mesh
+  env:
+    # Key rotation interval (seconds) - how often to refresh ephemeral keys
+    - name: KEY_ROTATION_INTERVAL_SECONDS
+      value: "3600"
+
+    # Zero-trust mode enforcement level
+    # "strict" = all connections require mTLS; "permissive" = allow some unencrypted
+    - name: ZERO_TRUST_MODE
+      value: "strict"
+
+    # Log level
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT RUNTIME PACKAGE (Execution Ring Enforcement)
+# ============================================================================
+
+agentRuntime:
+  # Agent Runtime sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-runtime
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent Runtime ring enforcement
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  # Security context - requires elevated privileges for ring enforcement
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    allowPrivilegeEscalation: true
+    readOnlyRootFilesystem: false
+    capabilities:
+      add:
+        - SYS_ADMIN
+        - SYS_PTRACE
+        - NET_ADMIN
+
+  # Port for Agent Runtime API
+  port: 9003
+
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9003
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9003
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  # Volume mounts
+  volumeMounts:
+    # Runtime ring configuration
+    - name: runtime-config
+      mountPath: /etc/adam-agt/runtime
+      readOnly: true
+
+    # Host cgroup access for ring enforcement
+    - name: cgroup
+      mountPath: /sys/fs/cgroup
+      readOnly: false
+
+    # Host proc access for process inspection
+    - name: proc
+      mountPath: /host/proc
+      readOnly: true
+
+  # Environment variables
+  env:
+    # Runtime ring definitions: kernel (root), system (privileged), user (unprivileged)
+    - name: RING_MODE
+      value: "three-ring"
+
+    # Action enforcement: "block" stops policy violations; "audit" logs only
+    - name: ENFORCEMENT_MODE
+      value: "block"
+
+    # Log level
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT SRE PACKAGE (Site Reliability Engineering & Observability)
+# ============================================================================
+
+agentSre:
+  # Agent SRE sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-sre
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent SRE observability
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1002
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for metrics export (Prometheus format)
+  metricsPort: 9090
+
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /metrics
+      port: 9090
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 9090
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # Environment variables
+  env:
+    # Azure Monitor integration
+    - name: AZURE_MONITOR_ENABLED
+      value: "true"
+
+    # Application Insights instrumentation key (from secret)
+    - name: APPINSIGHTS_INSTRUMENTATION_KEY
+      valueFrom:
+        secretKeyRef:
+          name: adam-agt-azure-monitor
+          key: appinsights-key
+
+    # Metrics scrape interval (seconds)
+    - name: METRICS_INTERVAL_SECONDS
+      value: "60"
+
+    # Log level
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT COMPLIANCE PACKAGE (Regulatory Compliance & Audit Trails)
+# ============================================================================
+
+agentCompliance:
+  # Agent Compliance sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-compliance
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent Compliance audit enforcement
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1003
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for compliance API
+  port: 9004
+
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9004
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9004
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # Volume mounts
+  volumeMounts:
+    # Compliance policies from ConfigMap
+    - name: compliance-config
+      mountPath: /etc/adam-agt/compliance
+      readOnly: true
+
+  # Environment variables
+  env:
+    # Regulatory frameworks to enforce (comma-separated)
+    - name: REGULATORY_FRAMEWORKS
+      value: "EU_AI_ACT,DORA,NIS2,SOC2"
+
+    # Flight Recorder submission interval (seconds)
+    - name: FLIGHT_RECORDER_SUBMIT_INTERVAL_SECONDS
+      value: "60"
+
+    # Compliance audit log level
+    - name: AUDIT_LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT MARKETPLACE PACKAGE (Plugin Signing & Artifact Verification)
+# ============================================================================
+
+agentMarketplace:
+  # Agent Marketplace sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-marketplace
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent Marketplace plugin verification
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 75m
+      memory: 96Mi
+    limits:
+      cpu: 300m
+      memory: 192Mi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1004
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for marketplace API
+  port: 9005
+
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9005
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9005
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # Environment variables
+  env:
+    # Artifact verification enforcement level
+    - name: ARTIFACT_VERIFICATION_MODE
+      value: "strict"
+
+    # Allowed plugin sources (signing keys)
+    - name: TRUSTED_PLUGIN_SOURCES
+      value: "adam-core,approved-partners"
+
+# ============================================================================
+# AGENT LIGHTNING PACKAGE (Reinforcement Learning Governance)
+# ============================================================================
+
+agentLightning:
+  # Agent Lightning sidecar container image
+  image:
+    repository: adamagtregistry.azurecr.io/adam-agent-lightning
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+
+  # Enable Agent Lightning RL-based optimization
+  enabled: true
+
+  # Container resource requests and limits
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1005
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  # Port for RL API
+  port: 9006
+
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9006
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9006
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  # Volume mounts
+  volumeMounts:
+    # RL models and training data
+    - name: lightning-models
+      mountPath: /var/lib/adam-agt/lightning
+
+    # Temporary directory for model training
+    - name: tmp-volume
+      mountPath: /tmp
+
+  # Environment variables
+  env:
+    # RL learning mode: "online" (continuous learning) or "batch" (periodic)
+    - name: RL_LEARNING_MODE
+      value: "online"
+
+    # Model update frequency (seconds)
+    - name: MODEL_UPDATE_INTERVAL_SECONDS
+      value: "300"
+
+    # Reward function for optimizing agent actions
+    - name: REWARD_FUNCTION
+      value: "compliance_score"
+
+# ============================================================================
+# PERSISTENT STORAGE CONFIGURATION
+# ============================================================================
+
+persistence:
+  # Enable persistent volumes for AGT state (policy cache, models, etc.)
+  enabled: true
+
+  # Storage class for persistent volumes (Azure managed disks)
+  storageClass: "managed-premium"
+
+  # Size of persistent volume for policy cache
+  policyCache:
+    size: 5Gi
+    # Path for policy cache mount
+    mountPath: /var/cache/adam-agt
+
+  # Size of persistent volume for RL models
+  lightningModels:
+    size: 10Gi
+    # Path for models mount
+    mountPath: /var/lib/adam-agt/lightning
+
+  # Size of persistent volume for Flight Recorder local queue
+  flightRecorderQueue:
+    size: 2Gi
+    mountPath: /var/queue/adam-agt/flight-recorder
+
+# ============================================================================
+# MONITORING AND ALERTING
+# ============================================================================
+
+monitoring:
+  # Enable Prometheus metrics scraping
+  prometheus:
+    enabled: true
+    # Scrape interval for AGT metrics
+    scrapeInterval: "30s"
+    # Metrics port and path
+    metricsPort: 9090
+    metricsPath: "/metrics"
+
+  # Azure Monitor alerts
+  alerts:
+    # Alert if policy engine is not responding
+    - name: AgentOsNotResponding
+      condition: "up{job='adam-agt-agent-os'} == 0"
+      for: 5m
+      severity: critical
+
+    # Alert if policy sync is lagging
+    - name: PolicySyncLag
+      condition: "policy_sync_lag_seconds > 300"
+      for: 10m
+      severity: warning
+
+    # Alert if Flight Recorder queue is backing up
+    - name: FlightRecorderQueueFull
+      condition: "flight_recorder_queue_usage_percent > 80"
+      for: 5m
+      severity: warning
+
+# ============================================================================
+# NODE AFFINITY AND TOPOLOGY CONSTRAINTS
+# ============================================================================
+
+nodeAffinity:
+  # Prefer nodes with specific labels in AKS
+  # AgentPool=governance ensures dedicated capacity for AGT
+  preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      preference:
+        matchExpressions:
+          - key: agentpool
+            operator: In
+            values:
+              - governance
+              - system
+
+  # Require nodes with adequate CPU/memory
+  requiredDuringSchedulingIgnoredDuringExecution:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: kubernetes.io/os
+            operator: In
+            values:
+              - linux
+          - key: node.kubernetes.io/instance-type
+            operator: In
+            values:
+              - Standard_D2s_v3  # 2 vCPU, 8GB RAM
+              - Standard_D4s_v3  # 4 vCPU, 16GB RAM
+
+# ============================================================================
+# SECURITY AND COMPLIANCE SETTINGS
+# ============================================================================
+
+security:
+  # Pod Security Policy enforcement
+  podSecurityPolicy:
+    enabled: true
+
+  # Network policies
+  networkPolicy:
+    enabled: true
+
+  # RBAC
+  rbac:
+    enabled: true
+
+  # Pod Security Standards
+  podSecurityStandards:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+
+# ============================================================================
+# DEBUG AND DEVELOPMENT SETTINGS
+# ============================================================================
+
+debug:
+  # Enable debug logging in AGT sidecars
+  enabled: false
+
+  # Log level override (debug, info, warn, error)
+  logLevel: "info"
+
+  # Enable verbose policy evaluation logging
+  verbosePolicyEvaluation: false
+
+  # Enable CPU profiling (performance overhead)
+  cpuProfiling: false
+
+  # Enable memory profiling (performance overhead)
+  memoryProfiling: false
