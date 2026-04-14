@@ -1,0 +1,25 @@
+global:
+  company: NetStreamX
+  platform: azure-local
+  adamVersion: '0.4'
+  mode: failover
+coreEngine:
+  mode: readonly
+  replicas: 2
+  cacheEnabled: true
+bossScoring:
+  mode: cached
+  dimensions:
+    financial_exposure: 3.6
+    regulatory_impact: 2.9
+    rights_certainty: 4.2
+    security_impact: 4.6
+    doctrinal_alignment: 3.8
+    reputational_risk: 3.3
+agentMesh:
+  mode: survival
+  totalAgents: 16
+  replicaCount: 1
+flightRecorder:
+  mode: local-write
+  syncOnReconnect: true

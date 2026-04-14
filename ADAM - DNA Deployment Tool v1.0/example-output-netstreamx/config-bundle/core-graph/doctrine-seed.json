@@ -1,0 +1,24 @@
+{
+  "vertex_type": "Doctrine",
+  "partition_key": "root",
+  "company": "NetStreamX",
+  "mission": "To entertain the world \u2014 giving every person on earth access to the stories, ideas, and experiences that move them.",
+  "vision": "To become the world\u2019s leading entertainment platform where any human, in any language, on any device, can find a story that changes their perspective.",
+  "principles": [
+    "Creator Freedom \u2014 We never override creative vision for commercial pressure.",
+    "Customer Trust as Foundation \u2014 Every decision starts with \u2018does this protect or enhance the viewer\u2019s trust?\u2019",
+    "Evidence Over Opinion \u2014 Data informs, evidence proves, opinion yields.",
+    "Radical Transparency Internally \u2014 Information flows freely; hoarding information is a fireable offense.",
+    "Compliance Is Not Optional \u2014 Regulatory obligations are mandates, never soft constraints."
+  ],
+  "sacred_boundaries": [
+    "Never sell or share individual viewing data to third parties",
+    "Never produce content that exploits minors",
+    "Never misrepresent AI-generated content as human-created without disclosure",
+    "Never accept advertising that conflicts with content editorial independence",
+    "Never silently resolve a doctrine conflict \u2014 always escalate to human directors"
+  ],
+  "legal_entity": "NetStreamX Inc. (Parent, Delaware). Subsidiaries: NetStreamX International B.V. (Netherlands \u2014 EMEA), NetStreamX Studios LLC (production), NetStreamX Games Inc. (gaming), NetStreamX Advertising Ltd (UK \u2014 ad tech). Each subsidiary has distinct regulatory obligations mapped in the Regulatory & Jurisdiction Subgraph.",
+  "immutable": true,
+  "requires_board_approval_to_modify": true
+}

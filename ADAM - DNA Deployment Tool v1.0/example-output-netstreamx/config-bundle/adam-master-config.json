@@ -1,0 +1,123 @@
+{
+  "$schema": "https://adam.io/schemas/dna-config/v1.0",
+  "adam_version": "0.4",
+  "dna_version": "1.0",
+  "company": {
+    "name": "NetStreamX",
+    "slug": "netstreamx",
+    "generated": "2026-03-29",
+    "mission": "To entertain the world \u2014 giving every person on earth access to the stories, ideas, and experiences that move them.",
+    "vision": "To become the world\u2019s leading entertainment platform where any human, in any language, on any device, can find a story that changes their perspective."
+  },
+  "core_engine": {
+    "graph_type": "gremlin-compatible",
+    "vertex_types": [
+      "Doctrine",
+      "Culture",
+      "Objectives",
+      "Rules",
+      "Expectations",
+      "Financials",
+      "Rights",
+      "Customer",
+      "Regulatory",
+      "StrategyDrift",
+      "IntentObject"
+    ],
+    "edge_types": [
+      "GOVERNS",
+      "CONSTRAINS",
+      "PRIORITIZES",
+      "CONFLICTS_WITH",
+      "DELEGATES_TO",
+      "MONITORS",
+      "FEEDS_INTO",
+      "ESCALATES_TO",
+      "AUDITS",
+      "SIMULATES"
+    ],
+    "immutable_layer": "doctrine-root",
+    "version_controlled": true
+  },
+  "boss": {
+    "dimensions": {
+      "financial_exposure": 3.6,
+      "regulatory_impact": 2.9,
+      "rights_certainty": 4.2,
+      "security_impact": 4.6,
+      "doctrinal_alignment": 3.8,
+      "reputational_risk": 3.3
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Immediate Escalation"
+      }
+    },
+    "composite_formula": "weighted_average_with_override",
+    "non_idempotent_penalty": 15,
+    "critical_dimension_override_threshold": 75
+  },
+  "agent_mesh": {
+    "total_agents": 82,
+    "total_vcpus": 3180,
+    "total_ram_gb": 12720,
+    "gpu_agents": 42,
+    "classes": {
+      "super_agents": 5,
+      "orchestration_agents": 4,
+      "human_interface_agents": 3,
+      "corporate_work_groups": 40,
+      "ai_centric_division": 23,
+      "digital_twin_agents": 4,
+      "meta_governance_agents": 3
+    }
+  },
+  "governance": {
+    "model": "5-director-constitution",
+    "directors": [
+      "CEO",
+      "CFO",
+      "Legal Director",
+      "Market Director",
+      "CISO"
+    ],
+    "optional_directors": [
+      "CPO"
+    ],
+    "interface_agents": [
+      "Intent Interpretation",
+      "Trust Gateway",
+      "Explain-Back"
+    ],
+    "exception_economy": true
+  },
+  "platforms_supported": [
+    "azure",
+    "aws",
+    "gcp",
+    "kubernetes",
+    "azure-local"
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "adam_deployment": {
+    "platform": "azure-local",
+    "company": "NetStreamX",
+    "version": "0.4",
+    "generated": "2026-03-29",
+    "mode": "failover-standby"
+  },
+  "activation_policy": {
+    "trigger": "Both Azure and AWS simultaneously unavailable OR data residency isolation",
+    "authorization": "CISO explicit authorization required",
+    "adam_self_failover": false
+  },
+  "reduced_agent_set": {
+    "total_agents": 16,
+    "agents": [
+      "5 Domain Governor Agents",
+      "4 Orchestration Agents",
+      "3 Human Interface Agents",
+      "CORE Engine (read-only)",
+      "BOSS Scoring (cached)",
+      "Policy Enforcement (cached)",
+      "Flight Recorder (local write)"
+    ],
+    "not_available": [
+      "Corporate Work Groups (39 agents)",
+      "AI-Centric Division (23 agents)",
+      "Digital Twins (4 agents)",
+      "Meta-Governance (3 agents - partial)"
+    ]
+  },
+  "capacity": {
+    "traffic_percentage": 30,
+    "disconnected_hours": 72,
+    "core_graph_mode": "read-only-cached",
+    "policy_mode": "cached-snapshot"
+  },
+  "sync_strategy": {
+    "core_graph_delta": "every 5 minutes (when connected)",
+    "policy_refresh": "hourly (when connected)",
+    "flight_recorder": "local write, merge on reconnection",
+    "failback": "manual only, CISO authorized, 4-hour validation minimum"
+  },
+  "boss_config": {
+    "dimensions": {
+      "financial_exposure": 3.6,
+      "regulatory_impact": 2.9,
+      "rights_certainty": 4.2,
+      "security_impact": 4.6,
+      "doctrinal_alignment": 3.8,
+      "reputational_risk": 3.3
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Immediate Escalation"
+      }
+    },
+    "mode": "cached-weights"
+  }
+}

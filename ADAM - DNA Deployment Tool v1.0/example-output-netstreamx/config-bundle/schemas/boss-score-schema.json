@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ADAM BOSS Score",
+  "type": "object",
+  "required": [
+    "score_id",
+    "intent_id",
+    "dimensions",
+    "composite_score",
+    "routing_tier"
+  ],
+  "properties": {
+    "score_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "intent_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "financial_exposure": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "regulatory_impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "rights_certainty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "security_impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "doctrinal_alignment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "reputational_risk": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "composite_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "routing_tier": {
+      "type": "string",
+      "enum": [
+        "soap",
+        "moderate",
+        "elevated",
+        "high",
+        "ohshat"
+      ]
+    },
+    "is_non_idempotent": {
+      "type": "boolean"
+    },
+    "critical_override_applied": {
+      "type": "boolean"
+    },
+    "policy_provenance": {
+      "type": "array"
+    }
+  }
+}

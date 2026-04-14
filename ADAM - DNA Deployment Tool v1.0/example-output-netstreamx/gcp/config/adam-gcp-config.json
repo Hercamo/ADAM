@@ -1,0 +1,88 @@
+{
+  "adam_deployment": {
+    "platform": "gcp",
+    "company": "NetStreamX",
+    "version": "0.4",
+    "generated": "2026-03-29"
+  },
+  "governance_plane": {
+    "core_engine": {
+      "database": "spanner",
+      "nodes": 3,
+      "config": "regional"
+    },
+    "flight_recorder": {
+      "storage": "gcs-retention-locked",
+      "retention_years": 7
+    },
+    "crypto_vault": {
+      "service": "cloud-kms"
+    }
+  },
+  "agent_mesh": {
+    "orchestration": "gke",
+    "total_agents": 82,
+    "node_pools": {
+      "governance": {
+        "machine_type": "n2-standard-16",
+        "min": 3,
+        "max": 10
+      },
+      "agents": {
+        "machine_type": "n2-standard-32",
+        "min": 5,
+        "max": 50
+      },
+      "gpu": {
+        "machine_type": "a2-highgpu-4g",
+        "min": 2,
+        "max": 20
+      }
+    }
+  },
+  "ai_services": {
+    "provider": "vertex-ai",
+    "models": {
+      "reasoning": "gemini-2.0-pro",
+      "execution": "gemini-2.0-flash",
+      "deep_reasoning": "gemini-2.0-pro"
+    }
+  },
+  "boss_config": {
+    "dimensions": {
+      "financial_exposure": 3.6,
+      "regulatory_impact": 2.9,
+      "rights_certainty": 4.2,
+      "security_impact": 4.6,
+      "doctrinal_alignment": 3.8,
+      "reputational_risk": 3.3
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Immediate Escalation"
+      }
+    }
+  }
+}
