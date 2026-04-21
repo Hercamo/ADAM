@@ -1,0 +1,121 @@
+{
+  "adam_deployment": {
+    "platform": "aws",
+    "company": "NetStreamX",
+    "version": "1.4",
+    "generated": "2026-04-20",
+    "role": "warm-standby",
+    "dna_questionnaire_version": "1.0",
+    "boss_formulas_version": "3.2"
+  },
+  "governance_plane": {
+    "core_engine": {
+      "database": "neptune-gremlin",
+      "instance_class": "db.r6g.4xlarge",
+      "replicas": 3
+    },
+    "flight_recorder": {
+      "storage": "s3-object-lock",
+      "encryption": "kms",
+      "retention_years": 7
+    },
+    "crypto_vault": {
+      "service": "kms",
+      "key_spec": "RSA_4096"
+    }
+  },
+  "agent_mesh": {
+    "orchestration": "eks",
+    "total_agents": "81+",
+    "node_groups": {
+      "governance": {
+        "instance_type": "m6i.4xlarge",
+        "min": 3,
+        "max": 10
+      },
+      "agent_mesh": {
+        "instance_type": "m6i.8xlarge",
+        "min": 3,
+        "max": 50
+      },
+      "gpu": {
+        "instance_type": "p4d.24xlarge",
+        "min": 1,
+        "max": 20
+      }
+    },
+    "reference_count": 81
+  },
+  "ai_services": {
+    "provider": "bedrock",
+    "models": {
+      "reasoning": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      "execution": "anthropic.claude-3-haiku-20240307-v1:0",
+      "deep_reasoning": "anthropic.claude-3-opus-20240229-v1:0"
+    }
+  },
+  "boss_config": {
+    "schema_version": "v3.2",
+    "aligned_with": "ADAM book v1.4",
+    "dimensions": {
+      "security_impact": 5.0,
+      "sovereignty_action": 4.0,
+      "financial_exposure": 4.0,
+      "regulatory_impact": 3.0,
+      "reputational_risk": 3.0,
+      "rights_certainty": 3.0,
+      "doctrinal_alignment": 2.0
+    },
+    "priority_tiers": {
+      "security_impact": "Top",
+      "sovereignty_action": "Very High",
+      "financial_exposure": "Very High",
+      "regulatory_impact": "High",
+      "reputational_risk": "High",
+      "rights_certainty": "High",
+      "doctrinal_alignment": "Medium"
+    },
+    "composite_formula": {
+      "type": "weighted_average",
+      "weight_sum": 24.0,
+      "formula": "C = (S_sec*5.0 + S_sov*4.0 + S_fin*4.0 + S_reg*3.0 + S_rep*3.0 + S_rights*3.0 + S_doc*2.0) / 24.0",
+      "critical_dimension_override": {
+        "threshold": 75,
+        "floor_offset": -10
+      },
+      "non_idempotent_penalty": {
+        "type": "additive_flat",
+        "value": 15,
+        "applies_to": "composite"
+      },
+      "cap": 100
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Autonomous Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Operational Hell, Send Humans Act Today!"
+      }
+    }
+  }
+}
