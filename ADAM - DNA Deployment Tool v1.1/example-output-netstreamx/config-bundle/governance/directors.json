@@ -1,0 +1,44 @@
+{
+  "governance_model": "5-director-constitution",
+  "company": "NetStreamX",
+  "directors": {
+    "ceo": {
+      "title": "CEO",
+      "domain": "Overall Enterprise Intent",
+      "authority": "Final arbiter for irreconcilable conflicts"
+    },
+    "cfo": {
+      "title": "CFO",
+      "domain": "Financial Stewardship",
+      "authority": "Financial doctrine, spending thresholds"
+    },
+    "legal": {
+      "title": "Legal Director",
+      "domain": "Regulatory Compliance",
+      "authority": "Jurisdictional rules, legal personality"
+    },
+    "market": {
+      "title": "Market Director",
+      "domain": "External Posture",
+      "authority": "Brand doctrine, competitive strategy"
+    },
+    "ciso": {
+      "title": "CISO",
+      "domain": "Security & Resilience",
+      "authority": "Security doctrine, trust boundaries"
+    }
+  },
+  "optional_directors": {
+    "cpo": {
+      "title": "CPO",
+      "domain": "Product & Innovation",
+      "activation": "3+ product lines"
+    }
+  },
+  "interface_agents": [
+    "Intent Interpretation Agent",
+    "Human Trust Gateway Agent",
+    "Explain-Back Agent"
+  ],
+  "directors_raw": "CEO (Primary Accountability) \u2014 Owns overall enterprise intent, final arbiter for irreconcilable doctrine conflicts, sole authority for mission/vision changes. CFO (Financial Stewardship) \u2014 Owns financial doctrine, spending thresholds, capital allocation, autonomy budget caps. Legal Director \u2014 Owns regulatory compliance doctrine, jurisdictional rules, legal personality boundary enforcement. Market Director \u2014 Owns external posture, brand doctrine, competitive strategy constraints. CISO \u2014 Owns security doctrine, trust boundaries, resilience posture, incident response thresholds."
+}

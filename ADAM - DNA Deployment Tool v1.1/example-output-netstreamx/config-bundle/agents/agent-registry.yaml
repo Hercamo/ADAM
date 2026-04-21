@@ -1,0 +1,528 @@
+_comment: 'ADAM 81+ Agent Mesh reference registry aligned to ADAM book v1.4. Canonical 5 Governor Agents: Financial, Legal & Compliance, Security & Trust, Market & Ecosystem, Operations & Delivery. Reference
+  count 81; actual deployed count is dynamic per DNA.'
+adam_version: '1.4'
+dna_questionnaire_version: '1.0'
+boss_formulas_version: '3.2'
+company: NetStreamX
+total_agents: 81+
+reference_count: 81
+agent_classes:
+  domain_governors:
+    description: Domain Governor Agents - the canonical 5 Governor Agents that evaluate intent against domain constraints (no execution).
+    agent_count: 5
+    agents:
+    - id: ga-financial
+      name: Financial Governor Agent
+      accountable_to: CFO
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+    - id: ga-legal
+      name: Legal & Compliance Governor Agent
+      accountable_to: Legal Director
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+    - id: ga-security
+      name: Security & Trust Governor Agent
+      accountable_to: CISO
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+    - id: ga-market
+      name: Market & Ecosystem Governor Agent
+      accountable_to: Market Director
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+    - id: ga-operations
+      name: Operations & Delivery Governor Agent
+      accountable_to: CEO
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+  orchestration_agents:
+    description: Decompose authorized intent into deterministic executable plans
+    agent_count: 4
+    agents:
+    - id: orch-global
+      name: Global Orchestration Agent
+      resources:
+        vcpus: 100
+        ram_gb: 400
+        gpu: false
+    - id: orch-policy
+      name: Policy Enforcement Orchestrator
+      resources:
+        vcpus: 100
+        ram_gb: 400
+        gpu: false
+    - id: orch-exception
+      name: Exception & Escalation Orchestrator
+      resources:
+        vcpus: 100
+        ram_gb: 400
+        gpu: false
+    - id: orch-evidence
+      name: Evidence-First Execution Orchestrator
+      resources:
+        vcpus: 100
+        ram_gb: 400
+        gpu: false
+  human_interface_agents:
+    description: Human-ADAM interaction layer
+    agent_count: 3
+    agents:
+    - id: hi-intent
+      name: Intent Interpretation Agent
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+    - id: hi-gateway
+      name: Human Trust Gateway Agent
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: false
+    - id: hi-explain
+      name: Explain-Back Agent
+      resources:
+        vcpus: 50
+        ram_gb: 200
+        gpu: true
+  corporate_work_groups:
+    description: Corporate Functions Domain - end-to-end corporate concerns
+    agent_count: 39
+    agents:
+    - id: wg-fin-txn
+      name: Transaction Processing Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-fin-recon
+      name: Reconciliation Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-fin-budget
+      name: Budget & Forecasting Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-fin-capital
+      name: Capital Allocation Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-fin-audit
+      name: Audit Preparation Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-fin-efficiency
+      name: Economic Efficiency Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-legal-contract
+      name: Contract Lifecycle Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-legal-reg
+      name: Regulatory Interpretation Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-legal-compliance
+      name: Compliance Monitoring Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-legal-risk
+      name: Legal Risk Analysis Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-legal-jurisdiction
+      name: Jurisdictional Logic Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-risk-assess
+      name: Risk Assessment Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-risk-monitor
+      name: Risk Monitoring Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-risk-liability
+      name: Liability Tracking Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-market-customer
+      name: Customer Interaction Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-market-partner
+      name: Partner Coordination Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-market-intel
+      name: Market Intelligence Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-market-demand
+      name: Demand Signal Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-market-reputation
+      name: Reputation Monitoring Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-ops-translate
+      name: Execution Translation Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-ops-innovation
+      name: Innovation Portfolio Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-ops-dependency
+      name: Dependency Awareness Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-ops-recovery
+      name: Failure Recovery Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-ops-bc
+      name: Business Continuity Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-ops-resilience
+      name: Resilience Testing Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-ops-catastrophe
+      name: Catastrophic Scenario Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-sec-threat
+      name: Threat Detection Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-sec-access
+      name: Access Control Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-sec-incident
+      name: Incident Response Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-sec-vault
+      name: Cryptographic Authorization Vault Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-gov-board
+      name: Board Reporting Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-gov-stakeholder
+      name: Stakeholder Communication Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+    - id: wg-gov-filing
+      name: Regulatory Filing Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-gov-compliance
+      name: Compliance Reporting Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-data-gov
+      name: Data Governance Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-data-quality
+      name: Data Quality Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-data-residency
+      name: Data Residency Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-data-pii
+      name: PII Protection Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: false
+    - id: wg-data-rights
+      name: Rights & Licensing Agent
+      resources:
+        vcpus: 20
+        ram_gb: 80
+        gpu: true
+  ai_centric_division:
+    description: AI-Centric Division - continuous monitoring and governance
+    agent_count: 23
+    agents:
+    - id: ai-auto-budget
+      name: Autonomy Budget Manager Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-auto-authority
+      name: Authority Boundary Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-auto-escalation
+      name: Escalation Logic Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-audit-collect
+      name: Evidence Collection Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-audit-correlate
+      name: Evidence Correlation Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-audit-simulate
+      name: Internal Audit Simulation Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-ethics-bias
+      name: Bias Detection Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-ethics-fairness
+      name: Fairness Monitoring Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-ethics-alignment
+      name: Ethical Alignment Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-model-registry
+      name: Model Registry Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-model-drift
+      name: Model Drift Detection Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-data-pipeline
+      name: Data Pipeline Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-data-knowledge
+      name: Knowledge Management Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-innov-experiment
+      name: Experiment Pipeline Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-innov-rollout
+      name: Safe Rollout Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-innov-results
+      name: Experiment Results Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-core-sync
+      name: CORE Graph Sync Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-core-alignment
+      name: CORE Alignment Scoring Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-external-stakeholder
+      name: External Stakeholder Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-external-regulatory
+      name: Regulatory Interface Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: ai-strategy-align
+      name: Strategy Alignment Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-strategy-competitive
+      name: Competitive Intelligence Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: ai-strategy-scenario
+      name: Scenario Planning Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+  digital_twin_agents:
+    description: Digital Twins - live self-models consulted before/during/after execution
+    agent_count: 4
+    agents:
+    - id: twin-enterprise
+      name: Enterprise Digital Twin Agent
+      resources:
+        vcpus: 200
+        ram_gb: 800
+        gpu: true
+    - id: twin-operational
+      name: Operational Twin Agent
+      resources:
+        vcpus: 200
+        ram_gb: 800
+        gpu: true
+    - id: twin-economic
+      name: Economic Twin Agent
+      resources:
+        vcpus: 200
+        ram_gb: 800
+        gpu: true
+    - id: twin-risk
+      name: Risk & Compliance Twin Agent
+      resources:
+        vcpus: 200
+        ram_gb: 800
+        gpu: true
+  meta_governance_agents:
+    description: Meta-Governance - what makes ADAM autonomous instead of automated
+    agent_count: 3
+    agents:
+    - id: meta-stability
+      name: Autonomy Stability Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false
+    - id: meta-integrity
+      name: CORE Graph Integrity Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: true
+    - id: meta-audit
+      name: Self-Audit Readiness Agent
+      resources:
+        vcpus: 30
+        ram_gb: 120
+        gpu: false

@@ -1,0 +1,21 @@
+principle: Autonomy is the default state. Human involvement is earned by consequence.
+target_exceptions_per_director_per_day: 5-15
+escalation_structure: 'Every exception packet contains: 1) The original Intent Object
+  (full schema). 2) The proposed action and execution plan. 3) Per-dimension BOSS
+  scores with policy provenance. 4) The specific dimension(s) that triggered escalation.
+  5) Predicted impact analysis (financial, regulatory, reputational). 6) Alternative
+  approaches with their BOSS scores. 7) Recommended decision with confidence level.
+  8) Time sensitivity (how long can this wait?). 9) Link to related historical exceptions
+  for pattern context. 10) One-click approve/reject/modify interface.'
+feedback_loop: "Every resolved exception is stored in the Flight Recorder with: the\
+  \ original exception, the human decision, the reasoning (if provided), and the outcome.\
+  \ Monthly analysis: Exception patterns are clustered by type. If a class of exceptions\
+  \ is approved >90% of the time without modification, the system proposes a threshold\
+  \ adjustment to auto-approve similar future cases. If a class is rejected >50%,\
+  \ the system proposes a tighter constraint. Proposed doctrine changes are presented\
+  \ to the relevant director as a structured proposal \u2014 ADAM never self-amends\
+  \ doctrine."
+auto_threshold_adjustment:
+  approved_90_percent: Propose threshold relaxation
+  rejected_50_percent: Propose tighter constraint
+doctrine_self_amendment: false

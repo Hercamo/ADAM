@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ADAM BOSS Score",
+  "type": "object",
+  "required": [
+    "score_id",
+    "intent_id",
+    "dimensions",
+    "composite_score",
+    "routing_tier"
+  ],
+  "properties": {
+    "score_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "intent_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "security_impact",
+        "sovereignty_action",
+        "financial_exposure",
+        "regulatory_impact",
+        "reputational_risk",
+        "rights_certainty",
+        "doctrinal_alignment"
+      ],
+      "description": "Canonical BOSS v3.2 7-dimension set. All seven dimensions are required.",
+      "properties": {
+        "security_impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Top tier (weight 5.0). NIST CSF 2.0 + CVSS v4.0 + MITRE ATT&CK basis."
+        },
+        "sovereignty_action": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Very High tier (weight 4.0). Aggregates 8 SEAL objectives SOV-1..SOV-8."
+        },
+        "financial_exposure": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Very High tier (weight 4.0). FAIR + COSO ERM basis."
+        },
+        "regulatory_impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "High tier (weight 3.0). EU AI Act + GRC Compliance Scoring basis."
+        },
+        "reputational_risk": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "High tier (weight 3.0). RepRisk RRI + RepTrak ESG basis."
+        },
+        "rights_certainty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "High tier (weight 3.0). ISO 31000 + NIST AI RMF basis."
+        },
+        "doctrinal_alignment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Medium tier (weight 2.0). COSO ERM Governance + ADAM CORE Engine basis."
+        }
+      }
+    },
+    "composite_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "routing_tier": {
+      "type": "string",
+      "enum": [
+        "soap",
+        "moderate",
+        "elevated",
+        "high",
+        "ohshat"
+      ]
+    },
+    "is_non_idempotent": {
+      "type": "boolean"
+    },
+    "critical_override_applied": {
+      "type": "boolean"
+    },
+    "policy_provenance": {
+      "type": "array"
+    }
+  }
+}

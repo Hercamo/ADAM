@@ -1,0 +1,35 @@
+apiVersion: adam.io/v1
+kind: FailoverPolicy
+metadata:
+  name: adam-failover-policy
+  company: NetStreamX
+spec:
+  tiers:
+    tier0_normal:
+      description: Full autonomy, all agents operational
+      platforms:
+      - azure-primary
+      agents: 81
+    tier1_degraded:
+      description: 1+ non-critical agents offline
+      action: Reduce autonomy budget 20%, enhanced logging
+      platforms:
+      - azure-primary
+      - aws-warm-standby
+    tier2_impaired:
+      description: Critical service degradation
+      action: Reduce autonomy budget 50%, essential agents only
+      platforms:
+      - aws-activated
+    tier3_crisis:
+      description: Major outage or security incident
+      action: Minimum autonomy, mandates only
+      platforms:
+      - aws-activated
+    tier4_catastrophic:
+      description: Azure Local failover activated
+      action: Survival mode, CISO + CEO directing
+      platforms:
+      - azure-local
+      agents: 16
+      capacity: 30%
