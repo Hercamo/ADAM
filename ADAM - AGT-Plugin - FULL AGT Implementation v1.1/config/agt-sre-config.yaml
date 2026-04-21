@@ -1,0 +1,434 @@
+# AGT Agent SRE Configuration
+# Site Reliability Engineering for ADAM's 81+ Agent Mesh
+# SLO definition, error budgets, circuit breakers, and chaos engineering
+# Version 1.1 | April 2026 | Aligned with ADAM book v1.4 (BOSS v3.2)
+# SLO classes are canonical ADAM v1.4 agent classes (7 total).
+
+# Agent SRE: Operational reliability for agent systems
+# AGT's Agent SRE package provides SLO enforcement, error budget tracking,
+# chaos engineering, and continuous reliability improvement
+agentSRE:
+  enabled: true
+
+  # Service Level Objectives (SLOs) for each agent class
+  # SLOs define the reliability targets agents must meet
+  serviceLevelObjectives:
+    enabled: true
+
+    # Global SLO defaults (can be overridden per agent type)
+    defaults:
+      # Availability SLO: percentage of time service is healthy
+      availabilitySLO: 99.9  # 99.9% = 43.2 minutes downtime per month
+      # Latency SLO: p99 response time
+      latencySLOMs: 100      # 100ms p99
+      # Error rate SLO: max percentage of failed requests
+      errorRateSLO: 0.1      # 0.1% error rate
+      # Freshness SLO: max staleness of data
+      freshnessSLOSeconds: 300
+
+    # Human Interface class (canonical ADAM v1.4 "human_interface"): User-facing, high availability required
+    # Covers: Intent-to-Action, Director Interface, Stakeholder Reporting
+    intentLayer:
+      agentType: "human-interface-agents"
+      description: "Human Interface — Intent capture, Director interface, stakeholder reporting"
+      availabilitySLO: 99.99  # 99.99% = 4.3 minutes per month
+      latencySLOMs: 50
+      errorRateSLO: 0.01
+      # User-visible latency is critical
+      userExperienceSLO:
+        p50LatencyMs: 20
+        p95LatencyMs: 50
+        p99LatencyMs: 50
+
+    # Governor Agent class (canonical ADAM v1.4 "governor_agent"): Policy enforcement, strict reliability
+    # Covers the 5 canonical Governor Agents: Financial, Legal & Compliance, Security & Trust, Market & Ecosystem, Operations & Delivery
+    domainGovernorLayer:
+      agentType: "governor-agents"
+      description: "Domain-specific governance, exception adjudication, Director escalation"
+      availabilitySLO: 99.95  # 99.95% = 21.6 minutes per month
+      latencySLOMs: 100
+      errorRateSLO: 0.05
+      # Policy decisions must be fast and consistent
+      policyDecisionSLO:
+        p50LatencyMs: 10
+        p99LatencyMs: 100
+        errorRate: 0.001  # 0.1% error rate for policies
+
+    # Orchestration Layer: Coordination across agents
+    orchestrationLayer:
+      agentType: "orchestration-agents"
+      description: "Request routing and saga coordination"
+      availabilitySLO: 99.9
+      latencySLOMs: 200  # Coordination has higher latency tolerance
+      errorRateSLO: 0.1
+      # Saga completion SLO
+      sagaCompletionSLO:
+        p50LatencyMs: 50
+        p95LatencyMs: 500
+        p99LatencyMs: 1000
+        successRate: 0.999  # 99.9% saga success rate
+
+    # Work Group class (canonical ADAM v1.4 "work_group"): 39 Corporate Work Group agents
+    # (Shares Ring 3 with AI-Centric Division — see aiCentricDivisionLayer below)
+    workgroupLayer:
+      agentType: "workgroup-agents"
+      description: "Corporate Work Group — 39 domain-specific task execution agents"
+      availabilitySLO: 99.5
+      latencySLOMs: 500  # Task execution time varies
+      errorRateSLO: 0.5
+      # Per-task SLOs (more flexible)
+      taskExecutionSLO:
+        maxDuration: 3600  # Max 1 hour per task
+
+    # Digital Twin class (canonical ADAM v1.4 "digital_twin"): 4 twins
+    # (Operational, Risk & Compliance, Economic, AI Creativity)
+    digitalTwinLayer:
+      agentType: "digital-twin-agents"
+      description: "Digital Twin — simulation and scenario modelling; no execution authority over live systems"
+      availabilitySLO: 99.5
+      latencySLOMs: 10000  # Scenario simulations tolerate higher latency
+      errorRateSLO: 0.5
+
+    # Meta-Governance class (canonical ADAM v1.4 "meta_governance"): 5 agents
+    # Highest authority — doctrine write, self-audit, schema registry
+    metaGovernanceLayer:
+      agentType: "meta-governance-agents"
+      description: "Meta-Governance — doctrine write, self-audit, schema registry (Ring 0)"
+      availabilitySLO: 99.99  # Four nines — doctrine write must never be unavailable
+      latencySLOMs: 200
+      errorRateSLO: 0.01
+
+    # Orchestration class canonical definition lives in `orchestrationLayer` above
+    # (richer saga-completion SLO nesting). The previous duplicate
+    # `orchestrationClass` block (2000ms latency) is removed — it conflicted with
+    # the 200ms coordination SLO and would have halved our throughput alerting.
+    # Legacy references to `orchestrationClass` resolve to `orchestrationLayer`.
+
+    # AI-Centric Division class (canonical ADAM v1.4 "ai_centric_division"): 23 agents
+    # AI strategy, AI product, AI research, AI ethics (Ring 3, alongside Work Group)
+    aiCentricDivisionLayer:
+      agentType: "ai-centric-division-agents"
+      description: "AI-Centric Division — AI strategy, product, research, ethics reviews"
+      availabilitySLO: 99.5
+      latencySLOMs: 30000
+      errorRateSLO: 0.5
+
+  # Error Budgets: allocation of allowed failures
+  errorBudgets:
+    enabled: true
+
+    # Error budget calculation method
+    calculationMethod: "percentage-based"  # Based on SLO percentage
+
+    # Monthly error budget reset
+    budgetResetInterval: "monthly"
+    budgetResetDay: 1
+    budgetResetTime: "00:00Z"
+
+    # Per-agent-class error budget allocation
+    budgetAllocation:
+      intentLayer:
+        # 99.99% SLO = 4.3 minutes error budget per month
+        budgetMinutesPerMonth: 4.3
+        # Percentage of budget used threshold
+        exhaustionThreshold: 50  # Alert if > 50% used
+        # Emergency mode when budget nearly exhausted
+        emergencyModeAt: 90  # Activate at 90% usage
+      domainGovernorLayer:
+        budgetMinutesPerMonth: 21.6
+        exhaustionThreshold: 50
+        emergencyModeAt: 90
+      orchestrationLayer:
+        budgetMinutesPerMonth: 43.2
+        exhaustionThreshold: 50
+        emergencyModeAt: 90
+      workgroupLayer:
+        budgetMinutesPerMonth: 216
+        exhaustionThreshold: 50
+        emergencyModeAt: 90
+      digitalTwinLayer:
+        budgetMinutesPerMonth: 43.2
+        exhaustionThreshold: 50
+        emergencyModeAt: 90
+
+    # Emergency mode: actions when budget nearly exhausted
+    emergencyMode:
+      enabled: true
+      # Actions when emergency mode triggered
+      actions:
+        - "increase-monitoring-verbosity"
+        - "page-on-call-sre"
+        - "disable-optional-features"
+        - "increase-error-budget-tracking-frequency"
+      # Notification channels
+      notificationChannels:
+        - "pagerduty"
+        - "ops-slack"
+
+  # Circuit Breaker: prevent cascading failures
+  circuitBreaker:
+    enabled: true
+
+    # Circuit breaker states: Closed -> Open -> Half-Open -> Closed
+    # Closed: normal operation, requests flow through
+    # Open: too many failures, requests rejected
+    # Half-Open: testing if service recovered
+
+    # Threshold for opening circuit (failures)
+    failureThreshold: 5
+    # Time window for counting failures (seconds)
+    failureWindow: 60
+    # Success threshold to close circuit (from half-open)
+    successThreshold: 2
+    # Time to stay open before half-open (seconds)
+    openDurationSeconds: 60
+
+    # Per-agent-type circuit breaker configuration
+    perAgentTypeConfig:
+      intentLayer:
+        failureThreshold: 3
+        failureWindow: 30
+      domainGovernorLayer:
+        failureThreshold: 5
+        failureWindow: 60
+      orchestrationLayer:
+        failureThreshold: 10
+        failureWindow: 120
+      workgroupLayer:
+        failureThreshold: 20
+        failureWindow: 300
+      digitalTwinLayer:
+        failureThreshold: 10
+        failureWindow: 120
+
+    # Circuit breaker monitoring
+    monitoring:
+      enabled: true
+      # Alert on circuit breaker state changes
+      alertOnStateChange: true
+      # Log all state transitions
+      logStateTransitions: true
+
+  # Chaos Engineering: proactive reliability testing
+  # Break things intentionally to find weaknesses
+  chaosEngineering:
+    enabled: false  # Disable by default, enable for testing
+    # Enable only in staging/testing environments
+    environments:
+      - "staging"
+      - "development"
+
+    # Chaos experiments to run
+    experiments:
+      # Experiment 1: Latency injection
+      latencyInjection:
+        enabled: false
+        description: "Inject random latency into agent responses"
+        # Target agents: which agents to affect
+        targetAgents:
+          - "type: orchestration-agents"
+        # Latency parameters
+        latency:
+          minMs: 10
+          maxMs: 100
+        # Probability of injection (0.0-1.0)
+        injectionRate: 0.01  # 1% of requests
+        # Duration of experiment
+        durationSeconds: 300
+        # Steady state: system should handle gracefully
+        expectedBehavior:
+          - "maintain-slo-compliance"
+          - "route-around-slow-agents"
+
+      # Experiment 2: Packet loss
+      packetLoss:
+        enabled: false
+        description: "Simulate network packet loss between agents"
+        targetAgents:
+          - "type: orchestration-agents"
+          - "type: workgroup-agents"
+        # Loss rate (0.0-1.0)
+        lossRate: 0.001  # 0.1% loss
+        durationSeconds: 300
+        expectedBehavior:
+          - "auto-retry-failed-messages"
+          - "trigger-circuit-breaker-if-excessive"
+
+      # Experiment 3: Agent partition
+      agentPartition:
+        enabled: false
+        description: "Network partition: isolate agent from mesh"
+        targetAgents:
+          - "count: 1"
+          - "type: workgroup-agents"
+        # Duration of partition
+        durationSeconds: 60
+        expectedBehavior:
+          - "detect-agent-unavailability"
+          - "fail-over-to-replica"
+          - "restore-when-partition-heals"
+
+      # Experiment 4: Agent crash
+      agentCrash:
+        enabled: false
+        description: "Crash an agent and monitor recovery"
+        targetAgents:
+          - "count: 1"
+          - "type: workgroup-agents"
+          - "excludeType": "intent-agents"  # Don't crash user-facing agents
+        # Duration before agent respawns
+        recoveryTime: 30
+        expectedBehavior:
+          - "detect-agent-crash"
+          - "trigger-saga-compensation-if-inflight"
+          - "respawn-agent"
+          - "restore-agent-state"
+
+      # Experiment 5: Resource exhaustion
+      resourceExhaustion:
+        enabled: false
+        description: "Exhaust agent resources (CPU, memory)"
+        targetAgents:
+          - "count: 1"
+          - "type: workgroup-agents"
+        resourceType: "memory"  # cpu or memory
+        # Exhaust to percentage
+        exhaustionLevel: 90
+        durationSeconds: 120
+        expectedBehavior:
+          - "trigger-kill-switch"
+          - "collect-forensics"
+          - "prevent-cascading-failures"
+
+      # Experiment 6: Policy enforcement failure
+      policyEnforcementFailure:
+        enabled: false
+        description: "Failure in policy evaluation"
+        targetAgents:
+          - "type: governor-agents"
+        # Return random policy decisions
+        failureMode: "random-decisions"
+        durationSeconds: 60
+        expectedBehavior:
+          - "detect-policy-inconsistency"
+          - "fail-safe-to-deny"
+          - "escalate-to-exception-economy"
+
+    # Chaos experiment scheduling
+    scheduling:
+      # Automated chaos tests
+      automatedTests:
+        enabled: false
+        schedule: "0 2 * * 0"  # Weekly at 2 AM Sunday
+        # Only in staging
+        environmentRestriction: "staging"
+      # On-demand chaos testing
+      onDemand:
+        enabled: true
+        # Require approval for on-demand tests
+        requireApproval: true
+        approvers:
+          - "sre-team"
+          - "on-call-sre"
+
+    # Chaos experiment reporting
+    reporting:
+      enabled: true
+      # Generate reports after experiments
+      generateReports: true
+      # Alert on unexpected failures
+      alertOnUnexpectedFailures: true
+      # Store results for trending
+      storageLocation: "s3://adam-chaos-results/"
+
+  # Continuous improvement from SRE data
+  continuousImprovement:
+    enabled: true
+
+    # SRE metrics analysis
+    metricsAnalysis:
+      enabled: true
+      # Analyze error rates over time
+      analyzeErrorRates: true
+      # Detect anomalies
+      anomalyDetection: true
+      # Identify reliability trends
+      trendAnalysis: true
+
+    # Recommendations for improvement
+    recommendations:
+      enabled: true
+      # Generate recommendations based on SRE data
+      autoGenerate: true
+      # Categories of recommendations
+      categories:
+        - "increase-replica-count"
+        - "add-caching-layer"
+        - "improve-circuit-breaker-settings"
+        - "increase-timeout-values"
+        - "reduce-error-rate-through-testing"
+
+  # Incident response integration
+  incidentResponse:
+    enabled: true
+
+    # Automatic incident creation for SLO violations
+    autoIncident:
+      enabled: true
+      # Create incident if SLO violated for this duration
+      thresholdDuration: 300  # 5 minutes
+      # Severity mapping
+      severityMapping:
+        availabilitySLOViolation: "critical"
+        latencySLOViolation: "major"
+        errorRateSLOViolation: "major"
+
+    # Post-incident review
+    postIncidentReview:
+      enabled: true
+      # Generate blameless post-mortem
+      generatePostMortem: true
+      # Track action items
+      trackActionItems: true
+      # SRE improvement backlog
+      feedbackLoop: "sre-improvement-backlog"
+
+  # SRE observability and dashboards
+  observability:
+    enabled: true
+
+    # Dashboard targets
+    dashboards:
+      - name: "SRE-Overview"
+        platform: "grafana"
+        metrics:
+          - "availability-slo-compliance"
+          - "error-budget-usage"
+          - "latency-percentiles"
+          - "error-rate"
+      - name: "Circuit-Breaker-Status"
+        platform: "grafana"
+        metrics:
+          - "circuit-breaker-state"
+          - "failure-counts"
+          - "recovery-attempts"
+      - name: "Chaos-Engineering-Results"
+        platform: "grafana"
+        metrics:
+          - "experiment-results"
+          - "unexpected-failures"
+          - "improvement-trends"
+
+    # Alerting for SRE metrics
+    alerting:
+      enabled: true
+      rules:
+        - name: "SLO-Violation"
+          condition: "slo_compliance < 95%"
+          severity: "critical"
+        - name: "Error-Budget-Exhaustion"
+          condition: "error_budget_used > 90%"
+          severity: "major"
+        - name: "Circuit-Breaker-Open"
+          condition: "circuit_breaker_state == OPEN"
+          severity: "major"

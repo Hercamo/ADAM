@@ -1,0 +1,590 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ADAM-AGT Trust Score Schema",
+  "description": "Trust score schema for AGT agent mesh integrated with ADAM BOSS scoring. Creates a two-dimensional trust surface: Agent Trust (0-1000) evaluates agent behavior; BOSS Score (0-100) evaluates action context.",
+  "type": "object",
+  "required": ["agentDid", "timestamp", "agentTrustScore", "bossScoreContext"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema version"
+    },
+    "agentDid": {
+      "type": "string",
+      "description": "Decentralized Identifier (DID) of the agent being scored",
+      "pattern": "^did:adam:[a-zA-Z0-9-]+$",
+      "example": "did:adam:intent-layer-001"
+    },
+    "agentLayer": {
+      "type": "string",
+      "description": "ADAM canonical 6 agent classes + meta-governance class. Legacy *-layer aliases retained for backwards compatibility with v1.0 contracts.",
+      "enum": [
+        "meta-governance-class",
+        "governor-agent-class",
+        "orchestration-class",
+        "human-interface-class",
+        "digital-twin-class",
+        "work-group-class",
+        "ai-centric-division-class",
+        "intent-layer",
+        "governor-agent-layer",
+        "orchestration-layer",
+        "workgroup-layer",
+        "digital-twin-layer"
+      ]
+    },
+    "agentType": {
+      "type": "string",
+      "description": "Classification of agent type within layer",
+      "examples": [
+        "user-interface-agent",
+        "policy-enforcer",
+        "saga-coordinator",
+        "task-executor",
+        "monitoring-agent"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when score was calculated"
+    },
+    "scoringWindow": {
+      "type": "object",
+      "description": "Time window over which trust score was calculated",
+      "required": ["startTime", "endTime"],
+      "properties": {
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "description": "Duration of scoring window in seconds"
+        }
+      }
+    },
+    "agentTrustScore": {
+      "type": "object",
+      "description": "Agent trust score (0-1000 scale). Evaluates agent reliability and compliance",
+      "required": ["score", "factors"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Overall agent trust score: 0=untrusted, 1000=fully trusted"
+        },
+        "authorityLevel": {
+          "type": "string",
+          "description": "ADAM authority level derived from trust score",
+          "enum": [
+            "QUARANTINED",
+            "RESTRICTED",
+            "STANDARD",
+            "ELEVATED",
+            "TRUSTED"
+          ]
+        },
+        "authorityLevelMapping": {
+          "type": "object",
+          "description": "Mapping of trust score range to authority level",
+          "properties": {
+            "quarantined": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "example": [0, 100]
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "examples": ["no-new-requests", "read-only-access"]
+                }
+              }
+            },
+            "restricted": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [101, 300]
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "examples": ["limited-scope", "requires-approval"]
+                }
+              }
+            },
+            "standard": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [301, 600]
+                },
+                "restrictions": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "elevated": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [601, 800]
+                }
+              }
+            },
+            "trusted": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [801, 1000]
+                }
+              }
+            }
+          }
+        },
+        "factors": {
+          "type": "array",
+          "description": "Individual factors contributing to trust score",
+          "items": {
+            "type": "object",
+            "required": ["factor", "score", "weight"],
+            "properties": {
+              "factor": {
+                "type": "string",
+                "description": "Name of scoring factor",
+                "enum": [
+                  "communication-latency",
+                  "policy-compliance-rate",
+                  "error-rate",
+                  "audit-log-anomalies",
+                  "request-timeout-rate",
+                  "cryptographic-verification-failures",
+                  "security-incident-history"
+                ]
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000,
+                "description": "Score for this factor (0-1000)"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Weight of this factor in overall score"
+              },
+              "metric": {
+                "type": "string",
+                "description": "Measured metric value"
+              },
+              "threshold": {
+                "type": "string",
+                "description": "Threshold for this factor"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["healthy", "degraded", "critical"],
+                "description": "Current status of this factor"
+              }
+            }
+          }
+        },
+        "trend": {
+          "type": "string",
+          "description": "Trust score trend",
+          "enum": ["improving", "stable", "degrading"],
+          "examples": ["improving"]
+        },
+        "trendDetails": {
+          "type": "object",
+          "description": "Detailed trend information",
+          "properties": {
+            "previousScore": {
+              "type": "number",
+              "description": "Trust score from previous scoring window"
+            },
+            "scoreDelta": {
+              "type": "number",
+              "description": "Change in score (can be negative)"
+            },
+            "percentChange": {
+              "type": "number",
+              "description": "Percentage change in score"
+            }
+          }
+        }
+      }
+    },
+    "bossScoreContext": {
+      "type": "object",
+      "description": "ADAM BOSS Score (0-100) context that affects trust decisions. BOSS evaluates the action/decision context; trust evaluates the agent executing it.",
+      "required": ["dimensions"],
+      "properties": {
+        "overallBossScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall BOSS score (0=safest, 100=riskiest)"
+        },
+        "bossEscalationTier": {
+          "type": "string",
+          "description": "ADAM BOSS escalation tier (5 tiers)",
+          "enum": [
+            "SOAP",
+            "MODERATE",
+            "ELEVATED",
+            "HIGH",
+            "OHSHAT"
+          ]
+        },
+        "tierMapping": {
+          "type": "object",
+          "description": "Mapping of BOSS score ranges to escalation tiers",
+          "properties": {
+            "SOAP": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [0, 10]
+                },
+                "description": {"type": "string", "example": "Safe and operational"}
+              }
+            },
+            "MODERATE": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [11, 30]
+                },
+                "description": {"type": "string", "example": "Monitor closely"}
+              }
+            },
+            "ELEVATED": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [31, 50]
+                },
+                "description": {"type": "string", "example": "Elevated caution required"}
+              }
+            },
+            "HIGH": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [51, 75]
+                },
+                "description": {"type": "string", "example": "High-risk monitoring"}
+              }
+            },
+            "OHSHAT": {
+              "type": "object",
+              "properties": {
+                "scoreRange": {
+                  "type": "array",
+                  "items": {"type": "number"},
+                  "example": [76, 100]
+                },
+                "description": {"type": "string", "example": "Emergency situation"}
+              }
+            }
+          }
+        },
+        "dimensions": {
+          "type": "array",
+          "description": "7 BOSS dimensions measuring risk across different axes",
+          "items": {
+            "type": "object",
+            "required": ["dimension", "score"],
+            "properties": {
+              "dimension": {
+                "type": "string",
+                "description": "BOSS dimension name",
+                "enum": [
+                  "Security",
+                  "Sovereignty",
+                  "Financial",
+                  "Regulatory",
+                  "Reputational",
+                  "Rights",
+                  "Doctrinal"
+                ]
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Score for this dimension (0-100)"
+              },
+              "escalationTier": {
+                "type": "string",
+                "enum": ["SOAP", "MODERATE", "ELEVATED", "HIGH", "OHSHAT"]
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of risk in this dimension"
+              },
+              "contributors": {
+                "type": "array",
+                "description": "Factors contributing to this dimension's score",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "value": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "trustSurface": {
+      "type": "object",
+      "description": "Two-dimensional trust surface combining agent trust and BOSS context",
+      "properties": {
+        "authorityAdjustment": {
+          "type": "string",
+          "description": "How BOSS context modifies agent authority level",
+          "example": "Agent ELEVATED authority reduced to STANDARD due to HIGH BOSS Financial Exposure dimension"
+        },
+        "allowedOperations": {
+          "type": "array",
+          "description": "Operations agent is allowed to perform given trust and BOSS context",
+          "items": {"type": "string"},
+          "examples": [
+            "read-operations",
+            "audit-operations",
+            "limited-write-operations"
+          ]
+        },
+        "requiredApprovals": {
+          "type": "array",
+          "description": "Approvals required from Directors based on trust and BOSS context",
+          "items": {
+            "type": "object",
+            "properties": {
+              "actor": {
+                "type": "string",
+                "description": "Director or authority required for approval"
+              },
+              "reason": {
+                "type": "string",
+                "description": "Reason for required approval"
+              }
+            }
+          }
+        },
+        "autonomyBudgetImpact": {
+          "type": "object",
+          "description": "How trust and BOSS affect autonomy budget consumption",
+          "properties": {
+            "baseCost": {
+              "type": "number",
+              "description": "Base autonomy cost for this operation"
+            },
+            "trustAdjustment": {
+              "type": "number",
+              "description": "Adjustment based on agent trust (negative = lower cost for trusted agents)"
+            },
+            "bossAdjustment": {
+              "type": "number",
+              "description": "Adjustment based on BOSS context (positive = higher cost in risky context)"
+            },
+            "totalCost": {
+              "type": "number",
+              "description": "Final autonomy budget cost"
+            }
+          }
+        }
+      }
+    },
+    "escalationPath": {
+      "type": "array",
+      "description": "Escalation path if agent trust drops or BOSS escalates",
+      "items": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "integer",
+            "description": "Escalation level"
+          },
+          "actor": {
+            "type": "string",
+            "description": "Actor/director at this escalation level"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action to take at this level"
+          },
+          "timeLimit": {
+            "type": "integer",
+            "description": "Time limit in seconds to respond at this level"
+          }
+        }
+      }
+    },
+    "trustHistory": {
+      "type": "array",
+      "description": "Recent trust score history for trend analysis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "bossScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      }
+    },
+    "verificationMetadata": {
+      "type": "object",
+      "description": "Metadata for cryptographic verification of trust score",
+      "properties": {
+        "signedBy": {
+          "type": "string",
+          "description": "DID of entity that signed this trust score"
+        },
+        "signature": {
+          "type": "string",
+          "description": "Ed25519 signature over score data"
+        },
+        "signatureTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["valid", "invalid", "expired"],
+          "description": "Current signature verification status"
+        }
+      }
+    },
+    "flightRecorderReference": {
+      "type": "object",
+      "description": "Reference to Flight Recorder entry for this trust score",
+      "properties": {
+        "entryHash": {
+          "type": "string",
+          "description": "SHA-256 hash of Flight Recorder entry"
+        },
+        "previousHash": {
+          "type": "string",
+          "description": "SHA-256 hash of previous entry (hash-chain link)"
+        },
+        "entryId": {
+          "type": "string",
+          "description": "Unique ID in Flight Recorder"
+        },
+        "sealed": {
+          "type": "boolean",
+          "description": "Whether entry is sealed (WORM)"
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "agentDid": "did:adam:orchestration-agent-042",
+      "agentLayer": "orchestration-layer",
+      "agentType": "saga-coordinator",
+      "timestamp": "2026-04-11T14:35:22Z",
+      "scoringWindow": {
+        "startTime": "2026-04-11T13:35:22Z",
+        "endTime": "2026-04-11T14:35:22Z",
+        "durationSeconds": 3600
+      },
+      "agentTrustScore": {
+        "score": 750,
+        "authorityLevel": "ELEVATED",
+        "factors": [
+          {
+            "factor": "policy-compliance-rate",
+            "score": 950,
+            "weight": 0.25,
+            "metric": "99.5% compliance",
+            "status": "healthy"
+          },
+          {
+            "factor": "communication-latency",
+            "score": 800,
+            "weight": 0.05,
+            "metric": "47ms p99",
+            "status": "healthy"
+          }
+        ],
+        "trend": "improving",
+        "trendDetails": {
+          "previousScore": 730,
+          "scoreDelta": 20,
+          "percentChange": 2.7
+        }
+      },
+      "bossScoreContext": {
+        "overallBossScore": 42,
+        "bossEscalationTier": "ELEVATED",
+        "dimensions": [
+          {
+            "dimension": "Security",
+            "score": 30,
+            "escalationTier": "MODERATE"
+          },
+          {
+            "dimension": "Financial",
+            "score": 55,
+            "escalationTier": "HIGH"
+          }
+        ]
+      },
+      "trustSurface": {
+        "authorityAdjustment": "Standard authority",
+        "allowedOperations": [
+          "read-operations",
+          "audit-operations",
+          "limited-write-operations"
+        ]
+      }
+    }
+  ]
+}

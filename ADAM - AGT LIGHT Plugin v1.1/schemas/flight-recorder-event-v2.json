@@ -1,0 +1,413 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://adam-framework.org/schemas/flight-recorder-event/v2.1",
+  "title": "ADAM Flight Recorder Event Schema v2.1",
+  "description": "Canonical schema for a single Flight Recorder evidence entry. v2.0 adds the agt_context block carrying AGT Light runtime enforcement data bridged by the RGI-04 adapter. v2.1 realigns the BOSS Score block to the ADAM v1.4 canonical formula (BOSS v3.2, weight-sum 24.0, non-idempotent penalty = +15 additive). All events are hash-chained, HSM-signed, and written to WORM storage. This schema is ADAM-sovereign — AGT does not write directly to the Flight Recorder.",
+  "version": "2.1",
+  "adam_sovereign": true,
+  "change_history": {
+    "v1.0": "Base ADAM Flight Recorder event schema",
+    "v2.0": "Added agt_context block: AGT runtime enforcement evidence bridged via RGI-04 adapter (April 2026)",
+    "v2.1": "Realigned BOSS dimensions to v3.2 canonical weights (security_impact 5.0, sovereignty_action 4.0, financial_exposure 4.0, regulatory_impact 3.0, reputational_risk 3.0, rights_certainty 3.0, doctrinal_alignment 2.0; weight-sum 24.0); composite formula = weighted_sum / 24.0; non-idempotent penalty changed to +15 additive (not a multiplier) (April 2026)"
+  },
+
+  "type": "object",
+  "required": [
+    "event_id",
+    "schema_version",
+    "intent_id",
+    "agent_id",
+    "action_type",
+    "timestamp_ns",
+    "boss_score",
+    "routing_decision",
+    "outcome",
+    "chain_hash",
+    "prev_chain_hash",
+    "hsm_signature"
+  ],
+
+  "properties": {
+
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Universally unique identifier for this Flight Recorder entry. Immutable once written."
+    },
+
+    "schema_version": {
+      "type": "string",
+      "enum": ["2.0", "2.1"],
+      "description": "Flight Recorder schema version. 2.0 introduced agt_context; 2.1 realigned BOSS to v3.2 canonical (weight-sum 24.0, additive non-idempotent penalty)."
+    },
+
+    "intent_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Correlating Intent Object ID. Propagated from Intent-to-Action Agent through all downstream agents. Links this event to the originating human instruction."
+    },
+
+    "agent_id": {
+      "type": "string",
+      "description": "Identifier of the agent that performed the action. For AGT-enabled deployments, this is the W3C DID (did:adam:...). For non-AGT deployments, the CORE Graph agent_id.",
+      "examples": ["did:adam:abcdef1234567890abcdef", "financial-analysis-agent-01"]
+    },
+
+    "agent_class": {
+      "type": "string",
+      "enum": ["meta_governance", "governor_agent", "orchestration", "human_interface", "digital_twin", "work_group", "ai_centric_division"],
+      "description": "ADAM agent class from the 81+ Agent Mesh topology (seven canonical classes)"
+    },
+
+    "action_type": {
+      "type": "string",
+      "description": "The type of action evaluated at this event boundary",
+      "examples": [
+        "tool_invocation",
+        "financial_commitment",
+        "data_transfer",
+        "external_api_call",
+        "agent_delegation",
+        "doctrine_read",
+        "exception_escalation",
+        "agent_suspension"
+      ]
+    },
+
+    "tool_id": {
+      "type": ["string", "null"],
+      "description": "Identifier of the tool or resource invoked. Null for non-tool actions."
+    },
+
+    "timestamp_ns": {
+      "type": "integer",
+      "description": "Event timestamp in Unix nanoseconds. Sourced from independent NTP (time.windows.com) — never from agent clock. Monotonic clock drift is detected by the RGI-04 adapter."
+    },
+
+    "boss_score": {
+      "type": "object",
+      "description": "BOSS Score snapshot at time of this action (canonical ADAM v1.4 / BOSS v3.2). The composite and all seven dimension scores are captured for every event.",
+      "required": ["composite", "dimensions", "formula_version"],
+      "properties": {
+        "composite": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Composite BOSS Score (0-100). Canonical formula: composite = sum(raw_score_d * weight_d) / 24.0. Critical Dimension Override: if any max(raw_score_d) > 75, composite = max(composite, max(raw_score_d) - 10). Non-Idempotent Penalty: +15 flat additive (NOT a multiplier) when action is not idempotent."
+        },
+        "formula_version": {
+          "type": "string",
+          "description": "Version of the BOSS Score formula in effect at evaluation time. 3.2 is canonical as of ADAM book v1.4.",
+          "enum": ["1.0", "1.1", "3.0", "3.1", "3.2"],
+          "examples": ["3.2"]
+        },
+        "weight_sum": {
+          "type": "number",
+          "description": "Denominator used for normalising the weighted_sum into a 0-100 composite. For BOSS v3.2 this is exactly 24.0.",
+          "examples": [24.0]
+        },
+        "non_idempotent_penalty_applied": {
+          "type": ["number", "null"],
+          "description": "Flat additive penalty applied because the action is not idempotent. BOSS v3.2 uses +15 (additive). Null or 0 when the action is idempotent."
+        },
+        "critical_dimension_override_applied": {
+          "type": ["boolean", "null"],
+          "description": "True if the Critical Dimension Override (max_dim > 75 ⇒ composite >= max_dim - 10) was applied when computing composite."
+        },
+        "dimensions": {
+          "type": "object",
+          "required": [
+            "security_impact",
+            "sovereignty_action",
+            "financial_exposure",
+            "regulatory_impact",
+            "reputational_risk",
+            "rights_certainty",
+            "doctrinal_alignment"
+          ],
+          "properties": {
+            "security_impact":     { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 5.0 (Priority Tier: Top) — CIA triad risk, adversarial surface" },
+            "sovereignty_action":  { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 4.0 (Priority Tier: Very High) — Authority scope and jurisdictional constraint" },
+            "financial_exposure":  { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 4.0 (Priority Tier: Very High) — Direct and contingent financial risk" },
+            "regulatory_impact":   { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 3.0 (Priority Tier: High) — Compliance and regulatory consequence" },
+            "reputational_risk":   { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 3.0 (Priority Tier: High) — Brand and stakeholder trust impact" },
+            "rights_certainty":    { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 3.0 (Priority Tier: High) — IP, privacy, consent, and rights clarity" },
+            "doctrinal_alignment": { "$ref": "#/definitions/boss_dimension_score", "description": "Weight 2.0 (Priority Tier: Medium) — Doctrine fit and organizational intent alignment" }
+          }
+        }
+      }
+    },
+
+    "routing_decision": {
+      "type": "string",
+      "enum": ["autonomous", "constrained", "elevated", "high", "ohshat"],
+      "description": "Machine-readable routing decision based on composite BOSS Score tier. Maps to: autonomous (SOAP 0-10), constrained (MODERATE 11-30), elevated (ELEVATED 31-50), high (HIGH 51-75), ohshat (OHSHAT 76-100)."
+    },
+
+    "outcome": {
+      "type": "string",
+      "enum": ["permitted", "denied", "escalated", "suspended", "pending_approval"],
+      "description": "Final outcome of the action evaluation at this event boundary"
+    },
+
+    "deny_reasons": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Populated when outcome is denied. Each entry is a human-readable reason from the policy evaluation engine (Agent OS or equivalent)."
+    },
+
+    "escalation_target": {
+      "type": ["string", "null"],
+      "description": "Populated when outcome is escalated. The agent or Director role to which execution was escalated.",
+      "examples": ["financial_governor_agent", "cfo_director", "ciso_director", "all_directors"]
+    },
+
+    "doctrine_version": {
+      "type": "string",
+      "description": "CORE Engine doctrine version in effect at time of evaluation. Enables doctrine-version-aware audit replay."
+    },
+
+    "agt_context": {
+      "$ref": "#/definitions/agt_context_block",
+      "description": "[AGT Light only] Runtime enforcement evidence block. Populated by the RGI-04 adapter from AGT OpenTelemetry spans. Absent for non-AGT deployments."
+    },
+
+    "chain_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of this event's canonical JSON (excluding chain_hash and hsm_signature fields). Used to verify event integrity independently of the chain.",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+
+    "prev_chain_hash": {
+      "type": ["string", "null"],
+      "description": "chain_hash of the immediately preceding Flight Recorder event. Creates the hash-chain for tamper detection. Null for the genesis event only.",
+      "pattern": "^[a-f0-9]{64}$|^null$"
+    },
+
+    "hsm_signature": {
+      "type": "object",
+      "description": "Ed25519 digital signature over chain_hash, produced by Azure Managed HSM. Cryptographic proof of evidence integrity.",
+      "required": ["algorithm", "key_id", "signature_b64"],
+      "properties": {
+        "algorithm":      { "type": "string", "enum": ["Ed25519"] },
+        "key_id":         { "type": "string", "description": "Azure Managed HSM key identifier" },
+        "signature_b64":  { "type": "string", "description": "Base64-encoded Ed25519 signature over chain_hash" }
+      }
+    },
+
+    "confidential_ledger_anchor": {
+      "type": ["object", "null"],
+      "description": "Azure Confidential Ledger transaction reference for this event. Populated asynchronously by the Flight Recorder infrastructure after write confirmation. Null until anchored.",
+      "properties": {
+        "transaction_id":  { "type": "string" },
+        "collection_id":   { "type": "string" },
+        "anchored_at_ns":  { "type": "integer" }
+      }
+    },
+
+    "retention_class": {
+      "type": "string",
+      "enum": ["standard", "enhanced", "comprehensive", "emergency"],
+      "description": "Retention and access tier. Maps to BOSS Score tier: SOAP=standard, MODERATE=enhanced, ELEVATED+HIGH=comprehensive, OHSHAT=emergency (7-year minimum for all classes)."
+    }
+  },
+
+  "definitions": {
+
+    "boss_dimension_score": {
+      "type": "object",
+      "required": ["raw_score", "weighted_score"],
+      "properties": {
+        "raw_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Unweighted dimension score (0-100)"
+        },
+        "weighted_score": {
+          "type": "number",
+          "minimum": 0,
+          "description": "raw_score × dimension_weight"
+        },
+        "contributing_signals": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Signal sources that contributed to this dimension score (e.g., AGT package events, CORE Engine rules)"
+        }
+      }
+    },
+
+    "agt_context_block": {
+      "type": "object",
+      "description": "AGT Light runtime enforcement evidence. Bridged from AGT OpenTelemetry spans by the ADAM RGI-04 adapter. Contains the enforcement evidence produced by AGT packages for this action.",
+      "properties": {
+
+        "agent_os_evaluation": {
+          "type": "object",
+          "description": "Evidence from AGT Agent OS policy evaluation (RGI-01)",
+          "properties": {
+            "policy_version":              { "type": "string" },
+            "evaluation_latency_ms":       { "type": "number", "description": "Actual p99 evaluation latency in milliseconds. SLA target: <0.1ms" },
+            "rules_evaluated":             { "type": "integer" },
+            "rules_triggered":             { "type": "integer" },
+            "policy_format":               { "type": "string", "enum": ["rego", "yaml", "cedar"] },
+            "capability_sandbox_result":   { "type": "string", "enum": ["permitted", "denied"] },
+            "intent_classification_score": { "type": ["number", "null"], "description": "Semantic intent alignment score (AA03 goal hijacking detection). 0.0=total deviation, 1.0=perfect alignment." }
+          }
+        },
+
+        "agent_mesh_identity": {
+          "type": "object",
+          "description": "Evidence from AGT Agent Mesh cryptographic identity verification (RGI-02)",
+          "properties": {
+            "did":                    { "type": "string", "description": "Agent DID at time of action", "examples": ["did:adam:abcdef1234567890"] },
+            "did_method":             { "type": "string", "enum": ["did:adam"] },
+            "identity_verified":      { "type": "boolean" },
+            "trust_score":            { "type": "integer", "minimum": 0, "maximum": 1000, "description": "IATP trust score at time of evaluation" },
+            "trust_tier":             { "type": "string", "enum": ["verified", "trusted", "standard", "probationary", "untrusted"] },
+            "revocation_checked":     { "type": "boolean" },
+            "revocation_status":      { "type": "string", "enum": ["valid", "revoked", "not_found"] }
+          }
+        },
+
+        "agent_runtime_ring": {
+          "type": "object",
+          "description": "Evidence from AGT Agent Runtime execution ring enforcement (RGI-03)",
+          "properties": {
+            "execution_ring":          { "type": "integer", "minimum": 0, "maximum": 3 },
+            "ring_label":              { "type": "string", "enum": ["doctrine_layer", "governor_layer", "coordination_layer", "execution_layer"] },
+            "ring_crossing_attempted": { "type": "boolean", "description": "True if agent attempted to invoke a capability above its assigned ring" },
+            "admission_controller_result": { "type": "string", "enum": ["admitted", "denied", "escalated"] }
+          }
+        },
+
+        "agent_compliance_classification": {
+          "type": "object",
+          "description": "Evidence from AGT Agent Compliance regulatory classification (feeds BOSS Regulatory Impact dimension)",
+          "properties": {
+            "eu_ai_act_risk_level":    { "type": ["string", "null"], "enum": ["unacceptable_risk", "high_risk", "limited_risk", "minimal_risk", null] },
+            "hipaa_applicable":        { "type": ["boolean", "null"] },
+            "soc2_applicable":         { "type": ["boolean", "null"] },
+            "classification_cached":   { "type": "boolean", "description": "True if regulatory classification came from cache rather than real-time evaluation" }
+          }
+        },
+
+        "agent_marketplace_verification": {
+          "type": "object",
+          "description": "Evidence from AGT Agent Marketplace tool/plugin integrity verification (RGI-05)",
+          "properties": {
+            "manifest_verified":       { "type": "boolean" },
+            "signing_algorithm":       { "type": "string", "enum": ["Ed25519"] },
+            "publisher_key_id":        { "type": ["string", "null"] },
+            "revocation_registry_checked": { "type": "boolean" },
+            "unsigned_tool_blocked":   { "type": ["boolean", "null"], "description": "Populated only when an unsigned tool invocation was attempted and blocked" }
+          }
+        },
+
+        "rgi_adapter_metadata": {
+          "type": "object",
+          "description": "Metadata added by the ADAM RGI-04 adapter during bridging from AGT OpenTelemetry to Flight Recorder format",
+          "properties": {
+            "adapter_version":         { "type": "string" },
+            "otel_trace_id":           { "type": "string", "description": "W3C trace ID from the originating AGT OpenTelemetry span" },
+            "otel_span_id":            { "type": "string" },
+            "batch_id":                { "type": "string", "description": "RGI-04 adapter batch ID (100 events per batch)" },
+            "bridged_at_ns":           { "type": "integer", "description": "Timestamp when RGI-04 adapter wrote this event to Flight Recorder (Unix nanoseconds)" }
+          }
+        }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "schema_version": "2.1",
+      "intent_id": "a4f3e100-1234-5678-9abc-def012345678",
+      "agent_id": "did:adam:abcdef1234567890abcdef",
+      "agent_class": "work_group",
+      "action_type": "tool_invocation",
+      "tool_id": "financial-data-api-v2",
+      "timestamp_ns": 1744300000000000000,
+      "boss_score": {
+        "composite": 6.1,
+        "formula_version": "3.2",
+        "weight_sum": 24.0,
+        "non_idempotent_penalty_applied": 0,
+        "critical_dimension_override_applied": false,
+        "dimensions": {
+          "security_impact":     { "raw_score": 8,  "weighted_score": 40.0, "contributing_signals": ["agt-os-permitted", "trust-score-750"] },
+          "sovereignty_action":  { "raw_score": 5,  "weighted_score": 20.0, "contributing_signals": ["within-ring-3", "authorized-tool"] },
+          "financial_exposure":  { "raw_score": 10, "weighted_score": 40.0, "contributing_signals": ["within-daily-budget"] },
+          "regulatory_impact":   { "raw_score": 5,  "weighted_score": 15.0, "contributing_signals": ["agt-compliance-limited-risk"] },
+          "reputational_risk":   { "raw_score": 3,  "weighted_score": 9.0,  "contributing_signals": [] },
+          "rights_certainty":    { "raw_score": 5,  "weighted_score": 15.0, "contributing_signals": ["manifest-verified"] },
+          "doctrinal_alignment": { "raw_score": 4,  "weighted_score": 8.0,  "contributing_signals": ["intent-classification-0.94"] }
+        }
+      },
+      "routing_decision": "autonomous",
+      "outcome": "permitted",
+      "doctrine_version": "1.3.2",
+      "retention_class": "standard",
+      "agt_context": {
+        "agent_os_evaluation": {
+          "policy_version": "1.0.4",
+          "evaluation_latency_ms": 0.07,
+          "rules_evaluated": 8,
+          "rules_triggered": 0,
+          "policy_format": "rego",
+          "capability_sandbox_result": "permitted",
+          "intent_classification_score": 0.94
+        },
+        "agent_mesh_identity": {
+          "did": "did:adam:abcdef1234567890abcdef",
+          "did_method": "did:adam",
+          "identity_verified": true,
+          "trust_score": 750,
+          "trust_tier": "trusted",
+          "revocation_checked": true,
+          "revocation_status": "valid"
+        },
+        "agent_runtime_ring": {
+          "execution_ring": 3,
+          "ring_label": "execution_layer",
+          "ring_crossing_attempted": false,
+          "admission_controller_result": "admitted"
+        },
+        "agent_compliance_classification": {
+          "eu_ai_act_risk_level": "limited_risk",
+          "hipaa_applicable": false,
+          "soc2_applicable": false,
+          "classification_cached": true
+        },
+        "agent_marketplace_verification": {
+          "manifest_verified": true,
+          "signing_algorithm": "Ed25519",
+          "publisher_key_id": "org-tools-publisher-key-01",
+          "revocation_registry_checked": true,
+          "unsigned_tool_blocked": null
+        },
+        "rgi_adapter_metadata": {
+          "adapter_version": "2.0.0",
+          "otel_trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+          "otel_span_id": "00f067aa0ba902b7",
+          "batch_id": "batch-2024-01-15T10:30:00Z-0042",
+          "bridged_at_ns": 1744300000045000000
+        }
+      },
+      "chain_hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+      "prev_chain_hash": "f0e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4",
+      "hsm_signature": {
+        "algorithm": "Ed25519",
+        "key_id": "https://adam-kv.managedhsm.azure.net/keys/adam-fr-signer/1",
+        "signature_b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "confidential_ledger_anchor": {
+        "transaction_id": "2.1.40",
+        "collection_id": "adam-fr-main",
+        "anchored_at_ns": 1744300000200000000
+      },
+      "retention_class": "standard"
+    }
+  ]
+}

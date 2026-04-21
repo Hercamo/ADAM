@@ -1,0 +1,362 @@
+---
+# ADAM-AGT Namespace and RBAC Configuration
+# This file defines the dedicated namespace for AGT Plugin deployment and all required RBAC (Role-Based Access Control)
+# The AGT Plugin operates as an enforcement layer in the Kubernetes cluster, requiring specific permissions to:
+# 1. Inject sidecar containers into ADAM agent pods
+# 2. Query and enforce CORE Graph policies
+# 3. Access cryptographic key material from secret storage
+# 4. Monitor and report on pod security posture
+# 5. Manage Flight Recorder audit entries
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-agt
+  labels:
+    app.kubernetes.io/name: adam-agt
+    app.kubernetes.io/component: governance
+    # Label for namespace isolation and network policy targeting
+    governance-layer: policy-enforcement
+  annotations:
+    # Namespace is reserved for ADAM AGT Plugin - do not deploy other workloads here
+    description: "Dedicated namespace for ADAM-Agent Governance Toolkit integration layer"
+    # Pod security standards: ADAM governance layer runs in restricted mode
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+# ServiceAccount for AGT Plugin
+# This account is used by:
+# - MutatingWebhookConfiguration for sidecar injection
+# - AGT policy engine pods
+# - CORE Graph sync agents
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: adam-agt-controller
+  namespace: adam-agt
+  labels:
+    app.kubernetes.io/name: adam-agt
+    app.kubernetes.io/component: controller
+
+---
+# ClusterRole for AGT Plugin Webhook and Governance Functions
+# Defines permissions needed across the entire cluster for policy enforcement
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-controller
+  labels:
+    app.kubernetes.io/name: adam-agt
+rules:
+  # ============= WEBHOOK AND VALIDATION PERMISSIONS =============
+  # Required to inject AGT sidecars into ADAM agent pods
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+
+  # Permission to read pod specs and determine if AGT injection is needed
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["patch", "update"]
+
+  # ============= POLICY ENFORCEMENT PERMISSIONS =============
+  # AGT policy engine needs to query and monitor pod behavior
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+
+  # Monitor pod execution for policy violations
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+
+  # ============= SECRET AND CREDENTIAL MANAGEMENT =============
+  # AGT sidecars need access to:
+  # - Ed25519 keypairs for Agent Mesh identity
+  # - Policy configuration secrets
+  # - Cosmos DB connection strings for CORE Graph
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+    # Applied only to secrets in adam-agt namespace and agent namespaces
+    resourceNames:
+      - adam-agt-keys
+      - adam-agt-policy-config
+      - cosmos-db-credentials
+
+  # ============= CONFIGMAP PERMISSIONS =============
+  # AGT reads policy configuration from ConfigMaps for dynamic policy updates
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+    resourceNames:
+      - adam-agt-policies
+      - adam-agt-core-graph-config
+      - adam-agt-flight-recorder-config
+
+  # ============= RBAC QUERY PERMISSIONS =============
+  # AGT policy engine queries RBAC to enforce least-privilege principle
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "watch"]
+
+  # ============= NETWORK POLICY PERMISSIONS =============
+  # AGT monitors network policies enforced by Agent Mesh for zero-trust networking
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  # ============= CUSTOM RESOURCE PERMISSIONS (if using CRDs) =============
+  # These would be for ADAM-specific custom resources (e.g., Intent Objects)
+  # Placeholder for future expansion
+  # - apiGroups: ["adam.io"]
+  #   resources: ["intentobjects", "coregrahs", "flightrecorders"]
+  #   verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding: Grant AGT Controller the governance permissions
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: adam-agt-controller
+subjects:
+  - kind: ServiceAccount
+    name: adam-agt-controller
+    namespace: adam-agt
+
+---
+# Role for AGT Plugin within its own namespace
+# Additional namespace-scoped permissions for configuration and state management
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-namespace
+  namespace: adam-agt
+rules:
+  # AGT controller manages its own configuration and secrets in the namespace
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # AGT controller manages its own pods and deployments
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # AGT needs to manage service accounts for sidecar injection
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
+
+  # AGT lifecycle management: leases for leader election (HA setup)
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+# RoleBinding: Grant AGT Controller the namespace-scoped permissions
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-namespace
+  namespace: adam-agt
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: adam-agt-namespace
+subjects:
+  - kind: ServiceAccount
+    name: adam-agt-controller
+    namespace: adam-agt
+
+---
+# ClusterRole for AGT Sidecars (injected into agent pods)
+# Sidecars run in the context of agent pods but need cluster-wide policy query permissions
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-sidecar
+  labels:
+    app.kubernetes.io/name: adam-agt
+    app.kubernetes.io/component: sidecar
+rules:
+  # Sidecars read policy decisions from CORE Graph
+  # In actual deployment, this would be via mTLS to Cosmos DB, not direct K8s RBAC
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["adam-agt-core-graph-cache"]
+    verbs: ["get", "watch"]
+
+  # Sidecars report policy enforcement events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
+
+  # Sidecars can read their own pod metadata
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+
+---
+# ServiceAccount for AGT Sidecars
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: adam-agt-sidecar
+  namespace: adam-agt
+  labels:
+    app.kubernetes.io/name: adam-agt
+    app.kubernetes.io/component: sidecar
+
+---
+# ClusterRoleBinding for AGT Sidecars
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-sidecar
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: adam-agt-sidecar
+subjects:
+  - kind: ServiceAccount
+    name: adam-agt-sidecar
+    namespace: adam-agt
+
+---
+# NetworkPolicy for AGT namespace
+# Enforces zero-trust networking:
+# - AGT controllers can receive traffic from Kubernetes API server
+# - AGT can connect to Cosmos DB (CORE Graph) and key management services
+# - AGT sidecars communicate with AGT controller for policy decisions
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: adam-agt-network-policy
+  namespace: adam-agt
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: adam-agt
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # Ingress: Allow traffic from Kubernetes API and agent namespaces
+  ingress:
+    # From Kubernetes API server (webhook)
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              component: kube-apiserver
+      ports:
+        - protocol: TCP
+          port: 8443
+
+    # From agent pods in other namespaces
+    - from:
+        - podSelector:
+            matchLabels:
+              governance-injectable: "true"
+      ports:
+        - protocol: TCP
+          port: 9000
+
+  # Egress: Allow connections to external services
+  egress:
+    # To Kubernetes API (for resource queries)
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              component: kube-apiserver
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # To Cosmos DB (CORE Graph policy database)
+    # In real deployment, this would be restricted by IP/DNS
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # To Key Vault or Vault (for credential management)
+    - to:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # DNS egress (required for service discovery)
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# ResourceQuota for AGT namespace
+# Prevents AGT components from consuming excessive cluster resources
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: adam-agt-quota
+  namespace: adam-agt
+spec:
+  hard:
+    # CPU limits (AGT is lightweight)
+    requests.cpu: "2"
+    limits.cpu: "4"
+    # Memory limits
+    requests.memory: "2Gi"
+    limits.memory: "4Gi"
+    # Pod limits
+    pods: "20"
+    # PVC limits
+    persistentvolumeclaims: "5"
+
+---
+# NetworkPolicy to isolate agent pods from each other (unless cooperating)
+# This policy is applied to agent namespaces via label selector
+# Agents in "governance-injectable: true" namespaces get AGT sidecars
+# and can only communicate through AGT mesh (Agent Mesh package)
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-mutating-webhook-viewer
+  # This role allows the webhook certificate auto-rotation mechanism to view webhook configs
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["get", "list", "watch"]
+
+---
+# RoleBinding for webhook viewer
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adam-agt-mutating-webhook-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: adam-agt-mutating-webhook-viewer
+subjects:
+  - kind: ServiceAccount
+    name: adam-agt-controller
+    namespace: adam-agt

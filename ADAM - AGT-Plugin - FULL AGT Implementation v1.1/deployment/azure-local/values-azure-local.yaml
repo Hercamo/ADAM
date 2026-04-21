@@ -1,0 +1,954 @@
+# ============================================================================
+# ADAM-AGT Helm Values for Azure Local (On-Premises/Sovereign Deployment)
+# ============================================================================
+#
+# This values file configures ADAM-AGT for deployment on Azure Local,
+# Microsoft's on-premises Kubernetes offering for organizations requiring
+# data sovereignty, reduced latency, or air-gapped operation.
+#
+# Azure Local enables a "sovereign-first" governance deployment where:
+# - Policy engine and CORE Graph run on-premises
+# - Execution can span between on-premises and cloud
+# - Flight Recorder stays on-premises (sovereign audit trail)
+# - Local HSM protects cryptographic keys
+# - Air-gapped mode available for isolated environments
+#
+# This deployment pattern is critical for ADAM's applicability in:
+# - Government and defense sectors
+# - Healthcare with strict data residency requirements
+# - Financial services with regulatory constraints
+# - International deployments with data sovereignty laws
+#
+# Key differentiators from AKS and generic K8s:
+# 1. Local Hardware Security Module (HSM) for key storage
+# 2. Air-gapped operation with no internet connectivity
+# 3. Sovereign data residency enforcement
+# 4. Reduced resource profiles for edge deployment
+# 5. Local caching of policy engine and CORE Graph
+# 6. On-premises Flight Recorder for immutable audit trails
+
+# ============================================================================
+# GLOBAL DEPLOYMENT CONFIGURATION
+# ============================================================================
+
+global:
+  # Deployment environment identifier
+  environment: sovereign-production
+
+  # Azure Local cluster name and location
+  clusterName: adam-azure-local-cluster
+  location: "on-premises"
+
+  # Deployment mode for sovereignty
+  deploymentMode: sovereign  # Options: sovereign, hybrid
+
+  # Image registry configuration
+  # For air-gapped deployments, pre-load container images into local registry
+  registry:
+    name: registry.local.example.com
+    imagePullSecrets: azure-local-acr-credentials
+    pullPolicy: IfNotPresent
+
+    # Air-gapped mode: no external registry access
+    # All images must be pre-loaded into local registry
+    airGappedMode:
+      enabled: true
+      requireAllImagesLocal: true
+
+  # Pod selector for AGT injection
+  podSelector:
+    labels:
+      governance-injectable: "true"
+
+# ============================================================================
+# AZURE LOCAL HARDWARE SECURITY MODULE (HSM)
+# ============================================================================
+# Local HSM provides FIPS 140-2 Level 3 key storage without cloud dependency
+
+hsm:
+  # Enable local HSM for cryptographic operations
+  enabled: true
+
+  # HSM type: "thales" (Luna), "gemalto", "yubihsm", or "generic"
+  # For Azure Local, typically uses integrated or attached HSM
+  type: "thales"
+
+  # HSM device configuration
+  device:
+    # Device path (e.g., /dev/hsm0 or socket address)
+    path: "/dev/ttyUSB0"
+
+    # HSM network socket (if network HSM)
+    # Only used if type is network-based HSM
+    socket: null
+
+    # HSM login credentials (stored in sealed Kubernetes Secret)
+    # HSM PIN is rotated regularly and stored in local key vault
+    credentials:
+      secretName: adam-hsm-credentials
+      pinKey: hsm-pin
+
+  # Key management policies
+  keyManagement:
+    # Key wrapping algorithm
+    wrappingAlgorithm: "AES-256-CBC"
+
+    # Key rotation interval (hours)
+    rotationIntervalHours: 720  # 30 days
+
+    # Key backup policy
+    backupPolicy:
+      enabled: true
+      # Backup destination (on-premises storage)
+      destination: "/var/backups/adam-agt-keys"
+      # Backup encryption
+      encryptionAlgorithm: "AES-256-GCM"
+
+  # HSM attestation for verification
+  attestation:
+    enabled: true
+    # Periodic attestation checks
+    checkIntervalSeconds: 3600
+
+# ============================================================================
+# AIR-GAPPED OPERATION MODE
+# ============================================================================
+# For completely isolated deployments with no internet connectivity
+
+airGappedMode:
+  # Enable air-gapped operation
+  enabled: false  # Set to true for isolated deployments
+
+  # Configuration for isolated networks
+  configuration:
+    # No external DNS resolution
+    dnsResolution: disabled
+
+    # No internet gateway (air-gap enforcement)
+    internetGateway: null
+
+    # Local DNS for internal service discovery
+    localDns:
+      enabled: true
+      nameservers:
+        - 10.0.0.10  # Local DNS server on-premises
+
+    # Local NTP for time synchronization (critical for PKI)
+    ntp:
+      enabled: true
+      servers:
+        - 10.0.0.11  # On-premises NTP server
+
+  # Artifact pre-loading for air-gapped environments
+  artifacts:
+    # All container images pre-loaded into local registry
+    # Populate this registry before deploying to air-gapped cluster
+    localRegistry: "registry.local.example.com"
+
+    # Policy database snapshot (pre-loaded)
+    policyDatabaseSnapshot:
+      enabled: true
+      location: "/var/lib/adam-agt/policy-db-snapshot.sql"
+
+    # Compliance rules snapshot (pre-loaded)
+    complianceRulesSnapshot:
+      enabled: true
+      location: "/var/lib/adam-agt/compliance-rules-snapshot.sql"
+
+# ============================================================================
+# SOVEREIGN DATA RESIDENCY ENFORCEMENT
+# ============================================================================
+# Ensures all ADAM governance data remains on-premises
+
+dataResidency:
+  # Enable data residency enforcement
+  enabled: true
+
+  # Geographic boundaries for data storage
+  boundaries:
+    # Require all data to stay within specified region/location
+    region: "on-premises"
+
+    # Prevent replication to cloud
+    allowCloudReplication: false
+
+    # Prevent logs from leaving on-premises network
+    allowLogExport: false
+
+    # Prevent metrics from leaving on-premises network
+    allowMetricsExport: false
+
+  # Audit trail - Flight Recorder
+  auditTrail:
+    # Flight Recorder stores on-premises only
+    location: "on-premises"
+
+    # Database backend for Flight Recorder (local)
+    database:
+      type: "postgresql"
+      host: "flight-recorder.local.example.com"
+      port: 5432
+      database: "adam-flight-recorder"
+
+    # Immutability enforcement (append-only)
+    immutability:
+      enabled: true
+      # Prevent deletion of audit records
+      allowDeletion: false
+
+    # Encryption for audit records
+    encryption:
+      enabled: true
+      algorithm: "AES-256-GCM"
+      keySource: "hsm"  # Key stored in local HSM
+
+# ============================================================================
+# LOCAL POLICY ENGINE AND CORE GRAPH
+# ============================================================================
+# Agent OS (policy engine) and CORE Graph run locally on-premises
+
+localPolicyEngine:
+  # Enable local policy engine (as opposed to cloud-based)
+  enabled: true
+
+  # Policy engine deployment configuration
+  deployment:
+    # Replicas for HA within on-premises cluster
+    replicas: 3
+
+    # Resource limits for on-premises hardware
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+
+  # Policy caching (critical for sovereignty - no cloud queries)
+  cache:
+    # Local policy cache in memory and on-disk
+    enabled: true
+    # Cache size on local storage
+    size: 50Gi
+    # TTL for cached policies
+    ttl: 3600  # 1 hour
+
+  # Policy database (CORE Graph)
+  database:
+    type: "postgresql"
+    # On-premises PostgreSQL instance
+    host: "core-graph.local.example.com"
+    port: 5432
+    database: "adam-core-graph"
+
+    # HA configuration for on-premises
+    ha:
+      enabled: true
+      replicas: 3
+      # Synchronous replication for consistency
+      replication: "synchronous"
+
+    # Backup configuration (on-premises)
+    backup:
+      enabled: true
+      # Backup to local NAS
+      destination: "/mnt/nas/backups/core-graph"
+      schedule: "daily"
+      retention: "30d"
+
+# ============================================================================
+# REDUCED RESOURCE PROFILES (Edge Deployment)
+# ============================================================================
+# Azure Local hardware may be constrained; optimize resource usage
+
+resourceProfiles:
+  # Resource profile: "standard" (cloud-like) or "edge" (constrained)
+  profile: "edge"
+
+  # Edge profile settings
+  edge:
+    # Reduce memory footprint
+    memoryOptimization: true
+
+    # Reduce CPU utilization
+    cpuOptimization: true
+
+    # Disable non-critical sidecars if resources constrained
+    minimalMode: false  # Set to true for ultra-constrained environments
+
+    # Container resource limits for edge
+    containerLimits:
+      maxCpuPerContainer: 500m
+      maxMemoryPerContainer: 256Mi
+
+  # Node resource constraints
+  nodeConstraints:
+    # Minimum node specifications for edge
+    minCpu: "4"
+    minMemory: "16Gi"
+    minDisk: "100Gi"
+
+# ============================================================================
+# LOCAL PERSISTENT STORAGE CONFIGURATION
+# ============================================================================
+# Uses local NAS, SAN, or attached storage (not cloud storage)
+
+persistence:
+  # Storage backend: "local", "nas", "san"
+  backend: "nas"
+
+  # NAS configuration (network-attached storage)
+  nas:
+    enabled: true
+    # NAS hostname/IP on local network
+    host: "nas.example.com"
+    # NFS share path
+    path: "/shares/adam-agt"
+    # NFS version
+    nfsVersion: 4.1
+
+  # SAN configuration (storage area network)
+  san:
+    enabled: false
+    # SAN iSCSI target
+    target: "iscsi.example.com:3260"
+
+  # Policy cache storage (local)
+  policyCache:
+    enabled: true
+    size: 30Gi
+    mountPath: /var/cache/adam-agt
+    # Storage class for on-premises
+    storageClass: "local-storage"
+
+  # Flight Recorder queue (local, immutable)
+  flightRecorderQueue:
+    enabled: true
+    size: 10Gi
+    mountPath: /var/queue/adam-agt/flight-recorder
+    storageClass: "local-storage"
+
+  # RL models (local)
+  lightningModels:
+    enabled: true
+    size: 20Gi
+    mountPath: /var/lib/adam-agt/lightning
+    storageClass: "local-storage"
+
+# ============================================================================
+# LOCAL OBSERVABILITY STACK
+# ============================================================================
+# On-premises monitoring without cloud connectivity
+
+monitoring:
+  # Enable local observability
+  enabled: true
+
+  # Prometheus for metrics
+  prometheus:
+    enabled: true
+    # Prometheus server on local cluster
+    service: prometheus-server.monitoring.local.svc.cluster.local
+    port: 9090
+    scheme: http
+
+    # Storage for metrics (on-premises)
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "local-storage"
+
+    # Shorter retention (constrained on-premises storage)
+    retention: 7d
+
+  # Grafana for visualization
+  grafana:
+    enabled: true
+    service: grafana.monitoring.local.svc.cluster.local
+    port: 3000
+
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: "local-storage"
+
+  # AlertManager for local alerting
+  alertmanager:
+    enabled: true
+    service: alertmanager.monitoring.local.svc.cluster.local
+    port: 9093
+
+    # Local alert routing (no external services)
+    routes:
+      - match:
+          severity: critical
+        # Alert via local email relay (no internet required)
+        receiver: local-admin-email
+
+      - match:
+          severity: warning
+        receiver: local-syslog
+
+# ============================================================================
+# SIDECAR INJECTION CONFIGURATION
+# ============================================================================
+
+sidecarInjection:
+  enabled: true
+  webhookNamespace: adam-agt
+  mode: "selective"
+
+  podSelector:
+    matchLabels:
+      inject-agt-sidecar: "true"
+
+  namespaceSelector:
+    matchLabels:
+      governance-injectable: "true"
+
+  failurePolicy: "Ignore"
+  timeoutSeconds: 30
+
+# ============================================================================
+# AGENT OS PACKAGE (Policy Engine) - Azure Local Optimized
+# ============================================================================
+
+agentOs:
+  image:
+    repository: registry.local.example.com/adam-agent-os
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  port: 9001
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9001
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9001
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  volumeMounts:
+    - name: policy-config
+      mountPath: /etc/adam-agt/policies
+      readOnly: true
+    - name: core-graph-cache
+      mountPath: /var/cache/adam-agt/core-graph
+      readOnly: true
+    - name: tmp-volume
+      mountPath: /tmp
+
+  env:
+    - name: POLICY_SYNC_INTERVAL_SECONDS
+      value: "30"
+
+    # Local CORE Graph database (on-premises)
+    - name: POLICY_DATABASE_HOST
+      value: "core-graph.local.example.com"
+
+    - name: POLICY_DATABASE_PORT
+      value: "5432"
+
+    # Policy mode for sovereign enforcement
+    - name: POLICY_MODE
+      value: "strict"
+
+    # Enforce sovereign data residency
+    - name: ENFORCE_DATA_RESIDENCY
+      value: "true"
+
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT MESH PACKAGE (Cryptographic Identity) - HSM Integration
+# ============================================================================
+
+agentMesh:
+  image:
+    repository: registry.local.example.com/adam-agent-mesh
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  port: 9002
+  mtlsProxyPort: 8443
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9002
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9002
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  volumeMounts:
+    # Ed25519 keypair from local HSM
+    - name: agt-identity-keys
+      mountPath: /etc/adam-agt/identity/keys
+      readOnly: true
+
+    # mTLS certificates
+    - name: agt-mesh-tls
+      mountPath: /etc/adam-agt/mesh/tls
+      readOnly: true
+
+    - name: tmp-volume
+      mountPath: /tmp
+
+  env:
+    # Local HSM configuration
+    - name: HSM_ENABLED
+      value: "true"
+
+    - name: HSM_DEVICE_PATH
+      value: "/dev/ttyUSB0"
+
+    - name: HSM_TYPE
+      value: "thales"
+
+    - name: CRYPTO_ALGORITHM
+      value: "Ed25519"
+
+    # Key rotation interval
+    - name: KEY_ROTATION_INTERVAL_SECONDS
+      value: "3600"
+
+    # Strict zero-trust for sovereign environments
+    - name: ZERO_TRUST_MODE
+      value: "strict"
+
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT RUNTIME PACKAGE (Execution Ring Enforcement)
+# ============================================================================
+
+agentRuntime:
+  image:
+    repository: registry.local.example.com/adam-agent-runtime
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    allowPrivilegeEscalation: true
+    readOnlyRootFilesystem: false
+    capabilities:
+      add:
+        - SYS_ADMIN
+        - SYS_PTRACE
+        - NET_ADMIN
+
+  port: 9003
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9003
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9003
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  volumeMounts:
+    - name: runtime-config
+      mountPath: /etc/adam-agt/runtime
+      readOnly: true
+    - name: cgroup
+      mountPath: /sys/fs/cgroup
+      readOnly: false
+    - name: proc
+      mountPath: /host/proc
+      readOnly: true
+
+  env:
+    - name: RING_MODE
+      value: "three-ring"
+
+    - name: ENFORCEMENT_MODE
+      value: "block"
+
+    # Enforce sovereign constraints on actions
+    - name: ENFORCE_DATA_RESIDENCY
+      value: "true"
+
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT SRE PACKAGE (Observability) - Local Only
+# ============================================================================
+
+agentSre:
+  image:
+    repository: registry.local.example.com/adam-agent-sre
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1002
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  metricsPort: 9090
+
+  livenessProbe:
+    httpGet:
+      path: /metrics
+      port: 9090
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 9090
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  env:
+    # Prometheus integration (local only)
+    - name: PROMETHEUS_ENABLED
+      value: "true"
+
+    - name: PROMETHEUS_PUSHGATEWAY
+      value: "prometheus-pushgateway.monitoring.local.svc.cluster.local:9091"
+
+    # No external metric export
+    - name: ALLOW_EXTERNAL_EXPORT
+      value: "false"
+
+    - name: METRICS_INTERVAL_SECONDS
+      value: "60"
+
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT COMPLIANCE PACKAGE - Sovereign Audit Trail
+# ============================================================================
+
+agentCompliance:
+  image:
+    repository: registry.local.example.com/adam-agent-compliance
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1003
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  port: 9004
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9004
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9004
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  volumeMounts:
+    - name: compliance-config
+      mountPath: /etc/adam-agt/compliance
+      readOnly: true
+
+  env:
+    - name: REGULATORY_FRAMEWORKS
+      value: "EU_AI_ACT,DORA,NIS2,SOC2"
+
+    # Flight Recorder on-premises (sovereign)
+    - name: FLIGHT_RECORDER_HOST
+      value: "flight-recorder.local.example.com"
+
+    - name: FLIGHT_RECORDER_PORT
+      value: "5432"
+
+    # Enforce immutability
+    - name: FLIGHT_RECORDER_IMMUTABLE
+      value: "true"
+
+    # Local submission interval (no cloud sync)
+    - name: FLIGHT_RECORDER_SUBMIT_INTERVAL_SECONDS
+      value: "60"
+
+    # Enforce data residency
+    - name: ENFORCE_DATA_RESIDENCY
+      value: "true"
+
+    - name: AUDIT_LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT MARKETPLACE PACKAGE (Plugin Verification)
+# ============================================================================
+
+agentMarketplace:
+  image:
+    repository: registry.local.example.com/adam-agent-marketplace
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 75m
+      memory: 96Mi
+    limits:
+      cpu: 300m
+      memory: 192Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1004
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  port: 9005
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9005
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9005
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  env:
+    # Strict verification for sovereign deployments
+    - name: ARTIFACT_VERIFICATION_MODE
+      value: "strict"
+
+    # Only allow pre-approved plugins
+    - name: TRUSTED_PLUGIN_SOURCES
+      value: "adam-core,approved-partners"
+
+    - name: LOG_LEVEL
+      value: "info"
+
+# ============================================================================
+# AGENT LIGHTNING PACKAGE (RL Optimization)
+# ============================================================================
+
+agentLightning:
+  image:
+    repository: registry.local.example.com/adam-agent-lightning
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1005
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  port: 9006
+
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: 9006
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 9006
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+  volumeMounts:
+    - name: lightning-models
+      mountPath: /var/lib/adam-agt/lightning
+
+    - name: tmp-volume
+      mountPath: /tmp
+
+  env:
+    # RL learning on local data only
+    - name: RL_LEARNING_MODE
+      value: "online"
+
+    - name: MODEL_UPDATE_INTERVAL_SECONDS
+      value: "300"
+
+    - name: REWARD_FUNCTION
+      value: "compliance_score"
+
+    # Enforce data residency for training data
+    - name: ENFORCE_DATA_RESIDENCY
+      value: "true"
+
+# ============================================================================
+# SECURITY AND COMPLIANCE FOR SOVEREIGN DEPLOYMENT
+# ============================================================================
+
+security:
+  podSecurityPolicy:
+    enabled: true
+
+  networkPolicy:
+    enabled: true
+    # Strict network isolation for sovereign
+    isolationLevel: "strict"
+
+  rbac:
+    enabled: true
+
+  # HSM-based encryption for all secrets
+  encryption:
+    enabled: true
+    provider: "hsm"
+
+  # Audit logging for all operations
+  auditLogging:
+    enabled: true
+    destination: "local"  # Stay on-premises
+
+# ============================================================================
+# NETWORK CONFIGURATION FOR SOVEREIGN DEPLOYMENT
+# ============================================================================
+
+network:
+  # Isolated network for sovereign cluster
+  isolation: true
+
+  # No external routing
+  allowExternalRouting: false
+
+  # Local service discovery only
+  serviceDiscovery: "local"
+
+  # Network policies for strict segmentation
+  networkPolicies:
+    enabled: true
+    # Default deny all external traffic
+    defaultDeny: true

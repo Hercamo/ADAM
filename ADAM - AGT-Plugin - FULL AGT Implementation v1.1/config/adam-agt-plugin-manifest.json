@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifestVersion": "1.1.0",
+  "pluginId": "adam-agt-integration",
+  "pluginName": "ADAM-AGT Plugin",
+  "version": "1.1.0",
+  "description": "Enterprise autonomous governance integration bridging ADAM (Autonomy Doctrine & Architecture Model) with Microsoft Agent Governance Toolkit (AGT). Aligned with ADAM book v1.4 / BOSS v3.2, 81+ Agent Mesh (7 canonical classes), 5 canonical Governor Agents, and the 5-Director Constitution.",
+  "author": "ADAM Book Project",
+  "license": "Proprietary",
+  "homepage": "https://adam-governance.io",
+  "documentation": "https://adam-governance.io/docs/agt-integration",
+  "minimumADAMVersion": "1.4.0",
+  "minimumAGTVersion": "2.0.0",
+  "pluginType": "governance-integration",
+  "capabilities": [
+    "policy-enforcement",
+    "trust-mesh",
+    "runtime-orchestration",
+    "compliance-mapping",
+    "evidence-recording",
+    "sre-operations",
+    "autonomy-budgeting"
+  ],
+  "requiredADAMComponents": {
+    "CORE_Engine": "^1.4.0",
+    "Policy_Risk_Plane": "^1.4.0",
+    "Security_Trust_Plane": "^1.4.0",
+    "Flight_Recorder": "^1.4.0",
+    "Exception_Economy": "^1.4.0",
+    "81_Plus_Agent_Mesh": "^1.4.0",
+    "Governor_Agents_5": "^1.4.0",
+    "Director_Constitution_5": "^1.4.0"
+  },
+  "agtPackageDependencies": {
+    "agent-os": {
+      "version": "^2.0.0",
+      "required": true,
+      "purpose": "Policy engine for ADAM enforcement"
+    },
+    "agent-mesh": {
+      "version": "^2.0.0",
+      "required": true,
+      "purpose": "Cryptographic identity and trust for agent topology"
+    },
+    "agent-runtime": {
+      "version": "^2.0.0",
+      "required": true,
+      "purpose": "Execution rings and saga orchestration"
+    },
+    "agent-sre": {
+      "version": "^2.0.0",
+      "required": false,
+      "purpose": "SLO enforcement and chaos engineering"
+    },
+    "agent-compliance": {
+      "version": "^2.0.0",
+      "required": true,
+      "purpose": "Regulatory mapping and audit reporting"
+    },
+    "agent-marketplace": {
+      "version": "^2.0.0",
+      "required": false,
+      "purpose": "Plugin signing and verification"
+    },
+    "agent-lightning": {
+      "version": "^2.0.0",
+      "required": false,
+      "purpose": "Reinforcement learning for governance optimization"
+    }
+  },
+  "deploymentTargets": {
+    "kubernetes": {
+      "supported": true,
+      "minVersion": "1.24.0",
+      "helmChart": "adam-agt-plugin",
+      "defaultNamespace": "adam-governance"
+    },
+    "docker": {
+      "supported": true,
+      "baseImage": "ubuntu:22.04",
+      "containerRegistry": "docker.io"
+    },
+    "bare-metal": {
+      "supported": true,
+      "osSupport": ["linux", "darwin", "windows"],
+      "architecture": ["amd64", "arm64"]
+    },
+    "serverless": {
+      "supported": false,
+      "reason": "Requires persistent Flight Recorder state"
+    }
+  },
+  "packageRegistry": {
+    "primary": {
+      "type": "helm",
+      "registry": "https://adam-governance.io/helm",
+      "authentication": "oauth2"
+    },
+    "artifact": {
+      "type": "container",
+      "registry": "docker.io/adamgovernance",
+      "authentication": "basic"
+    },
+    "source": {
+      "type": "git",
+      "repository": "https://github.com/adam-governance/adam-agt-plugin",
+      "branch": "main",
+      "authentication": "ssh"
+    }
+  },
+  "configuration": {
+    "policyEngine": {
+      "configFile": "agt-policy-engine-config.yaml",
+      "required": true
+    },
+    "agentMesh": {
+      "configFile": "agt-agent-mesh-config.yaml",
+      "required": true
+    },
+    "runtime": {
+      "configFile": "agt-runtime-config.yaml",
+      "required": true
+    },
+    "sre": {
+      "configFile": "agt-sre-config.yaml",
+      "required": false
+    },
+    "compliance": {
+      "configFile": "agt-compliance-config.yaml",
+      "required": true
+    }
+  },
+  "permissionsRequired": [
+    "policy-write",
+    "identity-manage",
+    "evidence-record",
+    "audit-read",
+    "exception-escalate",
+    "runtime-control"
+  ],
+  "securityContext": {
+    "runAsUser": "adam-agt",
+    "fsGroup": "adam-governance",
+    "readOnlyRootFilesystem": true,
+    "allowPrivilegeEscalation": false,
+    "capabilities": ["NET_BIND_SERVICE"],
+    "trustedSigners": [
+      "adam-governance-signer@adam-governance.io"
+    ]
+  },
+  "healthChecks": {
+    "startup": {
+      "path": "/health/startup",
+      "interval": 10,
+      "timeout": 5,
+      "failureThreshold": 3
+    },
+    "liveness": {
+      "path": "/health/live",
+      "interval": 30,
+      "timeout": 5,
+      "failureThreshold": 3
+    },
+    "readiness": {
+      "path": "/health/ready",
+      "interval": 5,
+      "timeout": 3,
+      "failureThreshold": 2
+    }
+  },
+  "integrationPoints": [
+    {
+      "name": "CORE_Policy_Injection",
+      "interface": "adam.core.PolicyStore",
+      "direction": "bidirectional",
+      "protocol": "gRPC"
+    },
+    {
+      "name": "Exception_Economy_Routing",
+      "interface": "adam.exception.Router",
+      "direction": "outbound",
+      "protocol": "gRPC"
+    },
+    {
+      "name": "Flight_Recorder_Feed",
+      "interface": "adam.recorder.EventSink",
+      "direction": "outbound",
+      "protocol": "Kafka"
+    },
+    {
+      "name": "Boss_Score_Ingestion",
+      "interface": "adam.boss.ScoringPlane",
+      "direction": "inbound",
+      "protocol": "gRPC"
+    },
+    {
+      "name": "Mesh_Identity_Service",
+      "interface": "adam.mesh.IdentityService",
+      "direction": "bidirectional",
+      "protocol": "mTLS"
+    }
+  ],
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "exportFormat": "prometheus",
+      "endpoint": ":8888/metrics"
+    },
+    "tracing": {
+      "enabled": true,
+      "exportFormat": "jaeger",
+      "samplingRate": 0.1
+    },
+    "logging": {
+      "enabled": true,
+      "level": "info",
+      "format": "json",
+      "output": "stdout"
+    }
+  },
+  "postInstallHooks": [
+    {
+      "name": "validate-dependencies",
+      "type": "script",
+      "command": "/opt/adam-agt/scripts/validate-deps.sh"
+    },
+    {
+      "name": "initialize-policies",
+      "type": "script",
+      "command": "/opt/adam-agt/scripts/init-policies.sh"
+    },
+    {
+      "name": "register-mesh-identities",
+      "type": "script",
+      "command": "/opt/adam-agt/scripts/register-identities.sh"
+    }
+  ],
+  "versionHistory": {
+    "0.4.0": {
+      "releaseDate": "2026-04-11",
+      "changes": [
+        "Initial release with ADAM v0.4 alignment",
+        "Full AGT 2.0 package integration",
+        "Flight Recorder hash-chain evidence recording",
+        "81-agent mesh DID identity support",
+        "BOSS score threshold enforcement"
+      ]
+    },
+    "1.1.0": {
+      "releaseDate": "2026-04-20",
+      "changes": [
+        "Aligned with ADAM book v1.4 canonical baseline",
+        "BOSS v3.2 weights (weight-sum 24.0) and Priority Tier scheme",
+        "81+ Agent Mesh (7 canonical classes) replaces legacy 5-layer model",
+        "5 canonical Governor Agents (Financial, Legal & Compliance, Security & Trust, Market & Ecosystem, Operations & Delivery); 'Super Agent' alias removed",
+        "5-Director Constitution (CEO, CFO, Legal, Market, CISO) as kill-switch quorum",
+        "Non-idempotent penalty switched from 1.5x multiplier to +15 additive on composite",
+        "Critical Dimension Override threshold=75, floor_offset=-10",
+        "Canonical IATP trust tiers (SUSPENDED, UNTRUSTED, PROBATIONARY, STANDARD, TRUSTED, VERIFIED)",
+        "AGT 4-ring canonical doctrinal mapping documented in runtime bridge"
+      ]
+    }
+  },
+  "keywords": [
+    "autonomous-governance",
+    "agent-mesh",
+    "policy-enforcement",
+    "compliance",
+    "risk-scoring",
+    "evidence-recording",
+    "exception-economy"
+  ]
+}

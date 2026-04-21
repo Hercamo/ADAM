@@ -1,0 +1,1023 @@
+# ============================================================================
+# ADAM-AGT Sidecar Injection Template for Azure Local (Sovereign Deployment)
+# ============================================================================
+#
+# This template is used for sidecar injection in Azure Local environments,
+# with focus on data sovereignty, HSM key protection, and air-gapped operation.
+#
+# Key differences from cloud deployments:
+# - Keys protected by local Hardware Security Module (HSM)
+# - All data remains on-premises (sovereign data residency)
+# - Air-gap ready: no external connectivity required
+# - Immutable Flight Recorder for audit compliance
+# - Optimized for constrained on-premises hardware
+#
+# This template ensures that ADAM governance infrastructure can operate
+# completely independently of cloud services, critical for:
+# - Government and defense deployments
+# - Highly regulated industries
+# - Organizations with data sovereignty requirements
+# - Disconnected/air-gapped environments
+
+---
+# ============================================================================
+# INIT CONTAINERS
+# ============================================================================
+
+initContainers:
+  # ===========================================================================
+  # AGT Setup Init Container (Sovereign Edition)
+  # ===========================================================================
+  # Sets up the pod filesystem with HSM-protected keys and local policies
+  - name: adam-agt-setup
+    image: registry.local.example.com/adam-agt-setup:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      capabilities:
+        drop:
+          - ALL
+
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # Create shared directories for AGT sidecars
+        mkdir -p /var/run/adam-agt/sockets
+        mkdir -p /var/cache/adam-agt/core-graph
+        mkdir -p /etc/adam-agt/policies
+        mkdir -p /etc/adam-agt/mesh/tls
+        mkdir -p /etc/adam-agt/runtime
+        mkdir -p /etc/adam-agt/compliance
+        mkdir -p /var/log/adam-agt
+
+        # Set permissions
+        chmod 755 /var/run/adam-agt
+        chmod 755 /var/cache/adam-agt
+        chmod 755 /etc/adam-agt
+
+        # Fetch local policy cache from on-premises CORE Graph database
+        # No external connectivity - only queries local PostgreSQL
+        /usr/local/bin/adam-agt-fetch-policies-local.sh || true
+
+        # Verify HSM connectivity and readiness
+        /usr/local/bin/adam-agt-verify-hsm.sh || \
+          (echo "ERROR: HSM verification failed - may indicate air-gap or connectivity issue"; exit 1)
+
+        echo "AGT setup completed successfully (sovereign mode)"
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-cache
+        mountPath: /var/cache/adam-agt
+      - name: agt-config
+        mountPath: /etc/adam-agt
+      - name: agt-logs
+        mountPath: /var/log/adam-agt
+      # HSM device access
+      - name: hsm-device
+        mountPath: /dev/hsm
+        readOnly: false
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Local CORE Graph database (on-premises only)
+      - name: POLICY_DATABASE_HOST
+        value: "core-graph.local.example.com"
+
+      - name: POLICY_DATABASE_PORT
+        value: "5432"
+
+      # HSM configuration for sovereign deployment
+      - name: HSM_ENABLED
+        value: "true"
+
+      - name: HSM_DEVICE_PATH
+        value: "/dev/hsm"
+
+      - name: HSM_TYPE
+        value: "thales"
+
+      # Enforce data residency
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+---
+# ============================================================================
+# SIDECAR CONTAINERS (Sovereign Edition)
+# ============================================================================
+# All 7 AGT packages with HSM integration and local-only data paths
+
+containers:
+  # ===========================================================================
+  # AGENT OS SIDECAR - Local Policy Engine
+  # ===========================================================================
+  # Queries local CORE Graph database on-premises
+  - name: adam-agt-agent-os
+    image: registry.local.example.com/adam-agent-os:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: policy-api
+        containerPort: 9001
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: policy-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: policy-api
+        scheme: HTTPS
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-cache
+        mountPath: /var/cache/adam-agt
+        readOnly: true
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: agt-logs
+        mountPath: /var/log/adam-agt
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Local CORE Graph database (on-premises PostgreSQL)
+      - name: POLICY_DATABASE_HOST
+        value: "core-graph.local.example.com"
+
+      - name: POLICY_DATABASE_PORT
+        value: "5432"
+
+      - name: POLICY_DATABASE_NAME
+        value: "adam-core-graph"
+
+      - name: POLICY_DATABASE_USER
+        value: "adam-agt"
+
+      - name: POLICY_DATABASE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: adam-postgres-credentials-local
+            key: password
+
+      # Policy evaluation mode
+      - name: POLICY_MODE
+        value: "strict"
+
+      # Sync interval for local policy cache
+      - name: POLICY_SYNC_INTERVAL_SECONDS
+        value: "30"
+
+      # Enforce sovereign data residency
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      # No cloud connectivity
+      - name: ALLOW_CLOUD_CONNECTIVITY
+        value: "false"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: policy-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT MESH SIDECAR - HSM-Protected Cryptographic Identity
+  # ===========================================================================
+  # Keys protected by local Hardware Security Module
+  - name: adam-agt-agent-mesh
+    image: registry.local.example.com/adam-agent-mesh:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: identity-api
+        containerPort: 9002
+        protocol: TCP
+      - name: mtls-proxy
+        containerPort: 8443
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: identity-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: identity-api
+        scheme: HTTPS
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      # HSM device for key operations
+      - name: hsm-device
+        mountPath: /dev/hsm
+        readOnly: false
+      - name: agt-mesh-tls
+        mountPath: /etc/adam-agt/mesh/tls
+        readOnly: true
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # HSM configuration for key protection
+      - name: HSM_ENABLED
+        value: "true"
+
+      - name: HSM_DEVICE_PATH
+        value: "/dev/hsm"
+
+      - name: HSM_TYPE
+        value: "thales"
+
+      # HSM credentials (from sealed secret)
+      - name: HSM_PIN
+        valueFrom:
+          secretKeyRef:
+            name: adam-hsm-credentials
+            key: hsm-pin
+
+      # Cryptographic algorithm
+      - name: CRYPTO_ALGORITHM
+        value: "Ed25519"
+
+      # Key rotation interval
+      - name: KEY_ROTATION_INTERVAL_SECONDS
+        value: "3600"
+
+      # Strict zero-trust for sovereign
+      - name: ZERO_TRUST_MODE
+        value: "strict"
+
+      # Enforce sovereign constraints
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      - name: MTLS_PROXY_PORT
+        value: "8443"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: identity-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT RUNTIME SIDECAR - Execution Ring Enforcement
+  # ===========================================================================
+  - name: adam-agt-agent-runtime
+    image: registry.local.example.com/adam-agent-runtime:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+      allowPrivilegeEscalation: true
+      readOnlyRootFilesystem: false
+      capabilities:
+        add:
+          - SYS_ADMIN
+          - SYS_PTRACE
+          - NET_ADMIN
+        drop:
+          - ALL
+
+    ports:
+      - name: runtime-api
+        containerPort: 9003
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: runtime-api
+        scheme: HTTPS
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: runtime-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: cgroup
+        mountPath: /sys/fs/cgroup
+        readOnly: false
+      - name: proc
+        mountPath: /host/proc
+        readOnly: true
+      - name: sys
+        mountPath: /sys
+        readOnly: false
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Ring enforcement mode
+      - name: RING_MODE
+        value: "three-ring"
+
+      # Enforcement action
+      - name: ENFORCEMENT_MODE
+        value: "block"
+
+      # Enforce sovereign constraints
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: runtime-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT SRE SIDECAR - Local Observability Only
+  # ===========================================================================
+  # Metrics stay on-premises, no cloud export
+  - name: adam-agt-agent-sre
+    image: registry.local.example.com/adam-agent-sre:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1002
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: metrics
+        containerPort: 9090
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /metrics
+        port: metrics
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: metrics
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: agt-cache
+        mountPath: /var/cache/adam-agt
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Prometheus on local cluster only
+      - name: PROMETHEUS_ENABLED
+        value: "true"
+
+      - name: PROMETHEUS_PUSHGATEWAY
+        value: "prometheus-pushgateway.monitoring.local.svc.cluster.local:9091"
+
+      # No external metric export
+      - name: ALLOW_EXTERNAL_EXPORT
+        value: "false"
+
+      - name: METRICS_INTERVAL_SECONDS
+        value: "60"
+
+      # Enforce sovereign constraints
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 400m
+        memory: 256Mi
+
+    startupProbe:
+      httpGet:
+        path: /ready
+        port: metrics
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT COMPLIANCE SIDECAR - Sovereign Immutable Audit Trail
+  # ===========================================================================
+  # Flight Recorder stays on-premises in immutable database
+  - name: adam-agt-agent-compliance
+    image: registry.local.example.com/adam-agent-compliance:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1003
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: compliance-api
+        containerPort: 9004
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: compliance-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: compliance-api
+        scheme: HTTPS
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: agt-logs
+        mountPath: /var/log/adam-agt
+      # HSM for Flight Recorder signing
+      - name: hsm-device
+        mountPath: /dev/hsm
+        readOnly: false
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Regulatory frameworks
+      - name: REGULATORY_FRAMEWORKS
+        value: "EU_AI_ACT,DORA,NIS2,SOC2"
+
+      # Flight Recorder database (on-premises, immutable)
+      - name: FLIGHT_RECORDER_HOST
+        value: "flight-recorder.local.example.com"
+
+      - name: FLIGHT_RECORDER_PORT
+        value: "5432"
+
+      - name: FLIGHT_RECORDER_USER
+        value: "adam-flight-recorder"
+
+      - name: FLIGHT_RECORDER_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: adam-flight-recorder-credentials
+            key: password
+
+      # Enforce immutability (append-only audit trail)
+      - name: FLIGHT_RECORDER_IMMUTABLE
+        value: "true"
+
+      # Enforce sovereign constraints
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      # No cloud submission
+      - name: ALLOW_CLOUD_SUBMISSION
+        value: "false"
+
+      # Local submission interval
+      - name: FLIGHT_RECORDER_SUBMIT_INTERVAL_SECONDS
+        value: "60"
+
+      - name: AUDIT_LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 400m
+        memory: 256Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: compliance-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT MARKETPLACE SIDECAR - Plugin Verification
+  # ===========================================================================
+  - name: adam-agt-agent-marketplace
+    image: registry.local.example.com/adam-agent-marketplace:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1004
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: marketplace-api
+        containerPort: 9005
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: marketplace-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: marketplace-api
+        scheme: HTTPS
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # Strict verification for sovereign deployments
+      - name: ARTIFACT_VERIFICATION_MODE
+        value: "strict"
+
+      # Only pre-approved plugins
+      - name: TRUSTED_PLUGIN_SOURCES
+        value: "adam-core,approved-partners"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 75m
+        memory: 96Mi
+      limits:
+        cpu: 300m
+        memory: 192Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: marketplace-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+  # ===========================================================================
+  # AGENT LIGHTNING SIDECAR - RL Optimization (Local Data Only)
+  # ===========================================================================
+  - name: adam-agt-agent-lightning
+    image: registry.local.example.com/adam-agent-lightning:1.1.0
+    imagePullPolicy: IfNotPresent
+
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1005
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    ports:
+      - name: lightning-api
+        containerPort: 9006
+        protocol: TCP
+
+    livenessProbe:
+      httpGet:
+        path: /health/live
+        port: lightning-api
+        scheme: HTTPS
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /health/ready
+        port: lightning-api
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    volumeMounts:
+      - name: agt-shared-fs
+        mountPath: /var/run/adam-agt
+      - name: lightning-models
+        mountPath: /var/lib/adam-agt/lightning
+      - name: agt-config
+        mountPath: /etc/adam-agt
+        readOnly: true
+      - name: tmp-volume
+        mountPath: /tmp
+
+    env:
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+
+      # RL learning on local data only
+      - name: RL_LEARNING_MODE
+        value: "online"
+
+      - name: MODEL_UPDATE_INTERVAL_SECONDS
+        value: "300"
+
+      - name: REWARD_FUNCTION
+        value: "compliance_score"
+
+      # Enforce sovereign constraints on training data
+      - name: ENFORCE_DATA_RESIDENCY
+        value: "true"
+
+      # No cloud model sharing
+      - name: ALLOW_CLOUD_MODEL_SHARING
+        value: "false"
+
+      - name: LOG_LEVEL
+        value: "info"
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+
+    startupProbe:
+      httpGet:
+        path: /health/ready
+        port: lightning-api
+        scheme: HTTPS
+      initialDelaySeconds: 0
+      periodSeconds: 1
+      timeoutSeconds: 5
+      failureThreshold: 30
+
+---
+# ============================================================================
+# VOLUMES (Sovereign Edition)
+# ============================================================================
+
+volumes:
+  # Shared filesystem
+  - name: agt-shared-fs
+    emptyDir:
+      medium: Memory
+      sizeLimit: 256Mi
+
+  # Policy cache (local storage)
+  - name: agt-cache
+    emptyDir:
+      medium: Memory
+      sizeLimit: 512Mi
+
+  # Configuration from ConfigMaps
+  - name: agt-config
+    projected:
+      sources:
+        - configMap:
+            name: adam-agt-policies
+            items:
+              - key: policies.yaml
+                path: policies.yaml
+        - configMap:
+            name: adam-agt-compliance-rules
+            items:
+              - key: rules.yaml
+                path: compliance/rules.yaml
+
+  # Log directory (stays on-premises)
+  - name: agt-logs
+    emptyDir:
+      medium: Memory
+      sizeLimit: 256Mi
+
+  # Temporary directory
+  - name: tmp-volume
+    emptyDir:
+      medium: Memory
+      sizeLimit: 128Mi
+
+  # HSM device for key operations
+  - name: hsm-device
+    hostPath:
+      path: /dev/hsm
+      type: CharDevice
+
+  # mTLS certificates
+  - name: agt-mesh-tls
+    emptyDir:
+      medium: Memory
+      sizeLimit: 32Mi
+
+  # Host filesystem mounts
+  - name: cgroup
+    hostPath:
+      path: /sys/fs/cgroup
+      type: Directory
+
+  - name: proc
+    hostPath:
+      path: /proc
+      type: Directory
+
+  - name: sys
+    hostPath:
+      path: /sys
+      type: Directory
+
+  # RL models (local NAS storage for sovereign)
+  - name: lightning-models
+    persistentVolumeClaim:
+      claimName: adam-agt-lightning-models
+
+---
+# ============================================================================
+# POD-LEVEL CONFIGURATION (Sovereign Edition)
+# ============================================================================
+
+dnsPolicy: ClusterFirst
+restartPolicy: Always
+terminationGracePeriodSeconds: 30
+
+# Affinity rules for on-premises placement
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            # Ensure deployment on HSM-equipped nodes
+            - key: hsm-enabled
+              operator: In
+              values:
+                - "true"
+            # Ensure on-premises nodes
+            - key: location
+              operator: In
+              values:
+                - "on-premises"
+            - key: kubernetes.io/os
+              operator: In
+              values:
+                - linux
+
+# High priority for governance workloads
+priorityClassName: system-cluster-critical
+
+# Pod security: restricted

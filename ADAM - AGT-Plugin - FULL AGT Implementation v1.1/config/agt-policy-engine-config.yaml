@@ -1,0 +1,427 @@
+# AGT Agent OS Policy Engine Configuration
+# Bridges AGT's policy enforcement with ADAM's Policy & Risk Plane
+# Version 1.1 | April 2026 | Aligned with ADAM book v1.4 (BOSS v3.2 canonical;
+#   81+ Agent Mesh; 5 canonical Governor Agents)
+
+# Agent OS Policy Engine: Core policy execution and enforcement
+# AGT's Agent OS package provides the underlying policy engine; this config
+# determines how it integrates with ADAM's Policy & Risk Plane and CORE Engine
+policyEngine:
+  # Enable/disable the policy engine globally
+  enabled: true
+
+  # Policy language support: which policy formats this engine can execute
+  # YAML: simple, human-readable policy format (ADAM native)
+  # OPA Rego: Rego language from Open Policy Agent (fine-grained logic)
+  # Cedar: AWS Cedar language for attribute-based access control
+  supportedLanguages:
+    - name: yaml
+      enabled: true
+      version: "1.0"
+      priority: 1  # Primary language for ADAM policies
+      schemaValidation: true
+    - name: opa-rego
+      enabled: true
+      version: "0.47.0"
+      priority: 2  # Secondary for complex logic
+      schemaValidation: true
+    - name: cedar
+      enabled: true
+      version: "3.0"
+      priority: 3  # Tertiary for AWS integrations
+      schemaValidation: true
+
+  # Policy compilation and caching strategy
+  compilation:
+    # Pre-compile all policies at startup vs JIT compilation
+    precompileAtStartup: true
+    # Cache compiled policies to reduce latency
+    cacheEnabled: true
+    # TTL for policy cache entries (seconds)
+    cacheTTL: 3600
+    # Maximum number of policies to cache
+    maxCacheSize: 10000
+    # Recompile if source policy changes within this window (ms)
+    changeDetectionWindow: 1000
+
+  # Policy repository configuration
+  # Policies can be loaded from multiple sources
+  repositories:
+    - name: core-adam-policies
+      type: git
+      url: "https://github.com/adam-governance/core-policies.git"
+      branch: "main"
+      syncInterval: 300  # Sync every 5 minutes
+      priority: 100  # Highest priority for core policies
+      authentication:
+        type: ssh
+        keyPath: "/secrets/adam-policies-ssh-key"
+    - name: exception-economy-policies
+      type: git
+      url: "https://github.com/adam-governance/exception-policies.git"
+      branch: "main"
+      syncInterval: 300
+      priority: 90
+    - name: regulatory-compliance-policies
+      type: configmap
+      namespace: adam-governance
+      configmapName: compliance-policies
+      syncInterval: 60
+      priority: 85
+
+  # BOSS Score Integration: Thresholds that trigger AGT enforcement
+  # BOSS v3.2 (ADAM-sovereign) — 0-100 composite; weight-sum 24.0
+  # 7 canonical dimensions (weight / Priority Tier):
+  #   security_impact      5.0  Top
+  #   sovereignty_action   4.0  Very High
+  #   financial_exposure   4.0  Very High
+  #   regulatory_impact    3.0  High
+  #   reputational_risk    3.0  High
+  #   rights_certainty     3.0  High
+  #   doctrinal_alignment  2.0  Medium
+  # 5 routing tiers: SOAP (0-10), MODERATE (11-30), ELEVATED (31-50), HIGH (51-75), OHSHAT (76-100)
+  # Modifiers: Critical Dimension Override (threshold 75, floor_offset -10);
+  #            Non-Idempotent Penalty (additive_flat +15 on composite)
+  bossScoreIntegration:
+    enabled: true
+    formulaVersion: "3.2"
+    weightSum: 24.0
+    criticalDimensionOverride:
+      threshold: 75
+      floorOffset: -10
+    nonIdempotentPenalty:
+      type: additive_flat
+      value: 15
+      appliesTo: composite
+
+    # Per-dimension thresholds that trigger policy enforcement
+    # Thresholds act on the RAW dimension score (0-100, canonical v3.2 scale);
+    # canonical dimension names are used throughout to match the CORE Engine
+    # BOSS export. Escalate values align to ELEVATED-band behaviour; kill-switch
+    # values align to the Critical Dimension Override threshold (75) or above.
+    dimensionThresholds:
+      # security_impact (weight 5.0, Top): system/data protection risks
+      security_impact:
+        escalatePolicyAt: 60   # ELEVATED raw
+        killSwitchAt: 80       # above CDO threshold (75)
+        policies:
+          - "enforce-encryption-at-rest"
+          - "enforce-mfa-authentication"
+          - "enforce-audit-logging"
+
+      # sovereignty_action (weight 4.0, Very High): jurisdiction / data residency
+      sovereignty_action:
+        escalatePolicyAt: 60
+        killSwitchAt: 80
+        policies:
+          - "enforce-data-residency"
+          - "enforce-cross-border-approval"
+          - "enforce-jurisdiction-constraints"
+
+      # financial_exposure (weight 4.0, Very High): budget, cost, fiscal controls
+      financial_exposure:
+        escalatePolicyAt: 70
+        killSwitchAt: 90
+        policies:
+          - "enforce-budget-caps"
+          - "enforce-cost-approval-workflow"
+          - "enforce-financial-audit-trail"
+
+      # regulatory_impact (weight 3.0, High): external regulation compliance
+      regulatory_impact:
+        escalatePolicyAt: 50
+        killSwitchAt: 70
+        policies:
+          - "enforce-regulatory-compliance"
+          - "enforce-audit-right-of-entry"
+          - "enforce-compliance-reporting"
+
+      # reputational_risk (weight 3.0, High): brand and market standing
+      reputational_risk:
+        escalatePolicyAt: 60
+        killSwitchAt: 80
+        policies:
+          - "enforce-public-commitment-alignment"
+          - "enforce-customer-promise-consistency"
+          - "enforce-reputational-guard-rails"
+
+      # rights_certainty (weight 3.0, High): employee, customer, stakeholder rights
+      rights_certainty:
+        escalatePolicyAt: 50
+        killSwitchAt: 80
+        policies:
+          - "enforce-employee-privacy"
+          - "enforce-customer-consent"
+          - "enforce-accessibility-compliance"
+
+      # doctrinal_alignment (weight 2.0, Medium): constitution / intent alignment
+      doctrinal_alignment:
+        escalatePolicyAt: 60
+        killSwitchAt: 80
+        policies:
+          - "enforce-5-director-constitution"
+          - "enforce-intent-alignment"
+          - "enforce-doctrinal-consistency"
+
+    # Composite BOSS score thresholds — weighted composite (not simple average)
+    # Per ADAM v1.4 / BOSS v3.2: composite = Σ(raw × weight) / 24.0, then
+    # apply Critical Dimension Override and Non-Idempotent Penalty above.
+    compositeThresholds:
+      weighted_composite:
+        escalatePolicyAt: 51   # HIGH tier boundary
+        killSwitchAt: 76       # OHSHAT tier boundary
+
+    # Feed BOSS scores into enforcement decisions (real-time)
+    realtimeScoreFeed: true
+    # Polling interval for BOSS score updates (ms)
+    scoreUpdateInterval: 100
+
+  # Performance and latency targets for policy decisions
+  performanceTargets:
+    # P99 latency target for policy decision: <0.1ms
+    p99LatencyMs: 0.1
+    p95LatencyMs: 0.05
+    p50LatencyMs: 0.02
+    # Monitor latency and alert if exceeded
+    latencyMonitoring: true
+    # SLO for policy decision success rate
+    successRateSLO: 0.9999  # 99.99% success rate
+
+  # Policy decision caching for frequently evaluated policies
+  decisionCache:
+    enabled: true
+    # Cache policy decisions for repeated calls
+    cacheSize: 50000
+    # TTL for decision cache entries (ms)
+    ttl: 5000
+    # Enable cache warming for critical policies
+    preWarmCriticalPolicies: true
+
+  # Escalation routing integration with ADAM's Exception Economy
+  # When a policy decision needs human oversight or exception approval
+  escalationRouting:
+    enabled: true
+    # Route to Exception Economy's autonomy budget manager
+    exceptionEconomyIntegration: true
+    # Default escalation targets based on policy category
+    # Canonical 5-Director Constitution: CEO, CFO, Legal Director,
+    # Market Director, CISO. Paired Governor Agents: Financial, Legal &
+    # Compliance, Security & Trust, Market & Ecosystem, Operations & Delivery.
+    escalationTargets:
+      security_impact:
+        primary: "security-trust-governor-agent"
+        fallback: "ciso-director"
+        escalationPath:
+          - level: 1
+            actor: "security-trust-governor-agent"
+            maxResolutionTime: 3600  # 1 hour
+          - level: 2
+            actor: "ciso-director"
+            maxResolutionTime: 7200  # 2 hours
+          - level: 3
+            actor: "ceo-director"
+            maxResolutionTime: 86400  # 24 hours
+
+      financial_exposure:
+        primary: "financial-governor-agent"
+        fallback: "cfo-director"
+        escalationPath:
+          - level: 1
+            actor: "financial-governor-agent"
+            maxResolutionTime: 3600
+          - level: 2
+            actor: "cfo-director"
+            maxResolutionTime: 7200
+          - level: 3
+            actor: "ceo-director"
+            maxResolutionTime: 86400
+
+      regulatory_impact:
+        primary: "legal-compliance-governor-agent"
+        fallback: "legal-director"
+        escalationPath:
+          - level: 1
+            actor: "legal-compliance-governor-agent"
+            maxResolutionTime: 1800  # 30 minutes for regulatory
+          - level: 2
+            actor: "legal-director"
+            maxResolutionTime: 3600
+          - level: 3
+            actor: "ceo-director"
+            maxResolutionTime: 7200
+
+      reputational_risk:
+        primary: "market-ecosystem-governor-agent"
+        fallback: "market-director"
+        escalationPath:
+          - level: 1
+            actor: "market-ecosystem-governor-agent"
+            maxResolutionTime: 3600
+          - level: 2
+            actor: "market-director"
+            maxResolutionTime: 7200
+          - level: 3
+            actor: "ceo-director"
+            maxResolutionTime: 86400
+
+      doctrinal_alignment:
+        primary: "operations-delivery-governor-agent"
+        fallback: "ceo-director"
+        escalationPath:
+          - level: 1
+            actor: "operations-delivery-governor-agent"
+            maxResolutionTime: 3600
+          - level: 2
+            actor: "ceo-director"
+            maxResolutionTime: 7200
+          - level: 3
+            actor: "five-director-constitution-quorum"
+            maxResolutionTime: 86400
+
+      # Sovereignty Action — second BOSS dimension (Priority Tier Very High, weight 4.0)
+      # Routes through the Security & Trust Governor Agent because sovereignty
+      # violations are evaluated alongside cybersecurity and operational integrity.
+      sovereignty_action:
+        primary: "security-trust-governor-agent"
+        fallback: "ciso-director"
+        escalationPath:
+          - level: 1
+            actor: "security-trust-governor-agent"
+            maxResolutionTime: 1800  # 30 minutes — sovereignty is existential
+          - level: 2
+            actor: "ciso-director"
+            maxResolutionTime: 3600
+          - level: 3
+            actor: "five-director-constitution-quorum"
+            maxResolutionTime: 14400  # 4 hours
+
+      # Rights Certainty — sixth BOSS dimension (Priority Tier High, weight 3.0)
+      # Routes through Legal & Compliance because rights questions are legal
+      # determinations (contract, IP, data-subject rights, delegation chains).
+      rights_certainty:
+        primary: "legal-compliance-governor-agent"
+        fallback: "legal-director"
+        escalationPath:
+          - level: 1
+            actor: "legal-compliance-governor-agent"
+            maxResolutionTime: 3600
+          - level: 2
+            actor: "legal-director"
+            maxResolutionTime: 7200
+          - level: 3
+            actor: "ceo-director"
+            maxResolutionTime: 86400
+
+    # Timeout for escalation decisions before auto-denial
+    escalationTimeout: 604800  # 7 days
+
+  # Policy enforcement mode: how strictly are policies applied
+  enforcementMode:
+    # "audit": log policy violations but don't block
+    # "warn": log and warn but allow with acknowledgment
+    # "block": strictly enforce, deny violations
+    default: "block"
+
+    # Different enforcement modes for different BOSS tiers
+    modeByBossTier:
+      SOAP: "audit"          # 0-10: Just observe
+      MODERATE: "warn"       # 11-30: Warn but allow
+      ELEVATED: "block"      # 31-50: Start blocking
+      HIGH: "block"          # 51-75: Strict blocking
+      OHSHAT: "block-kill"   # 76-100: Block and kill switch
+
+  # Deployment mode for policy enforcement
+  deploymentMode:
+    # "sidecar": Policy engine runs alongside each agent (distributed)
+    # "gateway": Central policy enforcement gateway
+    # "hybrid": Mix of sidecar and gateway
+    type: "gateway"
+
+    # Gateway configuration if type is gateway or hybrid
+    gateway:
+      enabled: true
+      replicaCount: 3
+      replicas:
+        - id: "policy-gateway-1"
+          host: "policy-gateway-1.adam-governance.svc.cluster.local"
+          port: 8000
+        - id: "policy-gateway-2"
+          host: "policy-gateway-2.adam-governance.svc.cluster.local"
+          port: 8000
+        - id: "policy-gateway-3"
+          host: "policy-gateway-3.adam-governance.svc.cluster.local"
+          port: 8000
+      # Load balancing strategy
+      loadBalancing: "round-robin"
+      # Circuit breaker: switch to local cache if gateway unavailable
+      circuitBreaker:
+        enabled: true
+        failureThreshold: 5
+        cooldownPeriodSeconds: 60
+
+    # Sidecar configuration if enabled in hybrid mode
+    sidecar:
+      enabled: false
+      syncPolicyIntervalSeconds: 60
+      fallbackToLocalCache: true
+
+  # Audit and logging of policy decisions
+  auditLogging:
+    enabled: true
+    logLevel: "info"  # debug, info, warn, error
+    # Send audit logs to Flight Recorder
+    sendToFlightRecorder: true
+    # Log every policy decision
+    logAllDecisions: false
+    # Log only decisions that violated a policy
+    logViolationsOnly: true
+    # Log escalations
+    logEscalations: true
+    # Audit log retention (days)
+    retentionDays: 730  # 2 years
+
+  # Policy versioning and rollback
+  versioning:
+    enabled: true
+    # Keep audit trail of policy versions
+    auditTrail: true
+    # Max previous versions to retain
+    maxHistoryCount: 100
+    # Allow rollback to previous policy versions
+    allowRollback: true
+    # Require approval for policy rollbacks
+    requireApprovalForRollback: true
+
+# Integration with ADAM's Policy & Risk Plane
+policyRiskPlane:
+  # Enable Policy & Risk Plane integration
+  enabled: true
+
+  # Policy Store endpoint (ADAM component)
+  policyStoreEndpoint: "grpc://policy-store.adam-governance.svc.cluster.local:50051"
+
+  # Metadata about which policies come from ADAM core
+  adamNativePolicies:
+    - "enforce-5-director-constitution"
+    - "enforce-intent-alignment"
+    - "enforce-exception-economy-rules"
+    - "enforce-autonomous-agent-limits"
+    - "enforce-autonomy-budget-constraints"
+
+# Connection pooling and performance tuning
+connectionPool:
+  # Max concurrent policy evaluations
+  maxConcurrentEvaluations: 1000
+  # Queue size for pending evaluations
+  queueSize: 50000
+  # Timeout for policy evaluation (ms)
+  evaluationTimeout: 100
+
+# Health and readiness checks
+health:
+  # Endpoint for health checks
+  healthCheckPath: "/health/policy-engine"
+  # Include policy engine status in system health
+  includeInSystemHealth: true
+  # Check that policy repositories are reachable
+  checkRepositoryConnectivity: true
