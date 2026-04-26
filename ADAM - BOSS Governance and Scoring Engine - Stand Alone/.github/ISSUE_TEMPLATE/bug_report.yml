@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible defect in the BOSS Engine.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please give enough detail for us to reproduce.
+  - type: input
+    id: version
+    attributes:
+      label: BOSS Engine version
+      placeholder: "e.g. 3.2.0"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Steps, payloads, or curl commands we can run.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Python / OS / Kubernetes version, auth mode, graph backend, adapter(s) in use.
+    validations:
+      required: false

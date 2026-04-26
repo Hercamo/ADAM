@@ -1,0 +1,59 @@
+# VCS
+.git
+.gitignore
+.github
+
+# Python build / cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+coverage.xml
+.tox
+.nox
+build
+dist
+*.egg-info
+.venv
+venv
+env
+
+# Node / Vite
+boss_console/node_modules
+boss_console/dist
+boss_console/.vite
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editors / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# CI artifacts
+.reports
+coverage.*
+junit.xml
+bandit.sarif
+
+# Project-local
+deploy/charts/*.tgz
+.env
+.env.*
+!.env.example
+
+# Docs we don't need in the runtime image
+docs/_build
+docs/.cache
+
+# Tests shouldn't ship in the image
+tests

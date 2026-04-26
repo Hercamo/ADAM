@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BOSS Evidence Console · standalone</title>
+    <!--
+      Single-file fallback for the BOSS Evidence Console.
+      Loads React 18, ReactDOM, Babel (for in-browser JSX), Tailwind, and Recharts
+      from public CDNs so the console can be opened directly from a filesystem
+      or a simple static web server without running `npm install`.
+
+      This file implements a condensed version of the full console:
+        - Health / token / API base configuration
+        - Dashboard (frameworks count, dimensions, current tier weights)
+        - Scoring (paste an Intent JSON, see radar + tier + modifiers)
+        - Framework catalog
+        - Flight Recorder tail (with client-side chain check)
+
+      For the full feature set (exception queue, receipt signing, tier editor)
+      use the Vite project in this same directory (`npm install && npm run dev`).
+    -->
+
+    <!-- Tailwind (JIT via play CDN, production deploys should build the real Vite project). -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              adam: {
+                navy: "#0b1220",
+                charcoal: "#111827",
+                ink: "#020617",
+                accent: "#60a5fa",
+                mist: "#cbd5f5",
+              },
+              tier: {
+                soap: "#22c55e",
+                moderate: "#eab308",
+                elevated: "#f97316",
+                high: "#ef4444",
+                ohshat: "#7f1d1d",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+              mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      html,
+      body,
+      #root {
+        min-height: 100%;
+        background-color: #020617;
+        color: #e2e8f0;
+      }
+      .card {
+        border-radius: 0.75rem;
+        background-color: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(30, 41, 59, 0.8);
+      }
+      .card-padded {
+        padding: 1rem;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border-radius: 9999px;
+        padding: 0.125rem 0.625rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+    </style>
+
+    <!-- React, ReactDOM, Babel, Recharts from CDN. -->
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  </head>
+  <body class="font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="env,react">
+      const { useState, useEffect, useMemo, useCallback } = React;
+      const {
+        RadarChart,
+        PolarGrid,
+        PolarAngleAxis,
+        PolarRadiusAxis,
+        Radar,
+        ResponsiveContainer,
+        Tooltip,
+      } = Recharts;
+
+      const DIMENSION_ORDER = [
+        "security",
+        "sovereignty",
+        "financial",
+        "regulatory",
+        "reputational",
+        "rights",
+        "doctrinal",
+      ];
+
+      const TIER_META = {
+        SOAP: { label: "SOAP", color: "#22c55e", bg: "bg-tier-soap/20", text: "text-tier-soap" },
+        MODERATE: {
+          label: "MODERATE",
+          color: "#eab308",
+          bg: "bg-tier-moderate/20",
+          text: "text-tier-moderate",
+        },
+        ELEVATED: {
+          label: "ELEVATED",
+          color: "#f97316",
+          bg: "bg-tier-elevated/20",
+          text: "text-tier-elevated",
+        },
+        HIGH: { label: "HIGH", color: "#ef4444", bg: "bg-tier-high/20", text: "text-tier-high" },
+        OHSHAT: {
+          label: "OHSHAT",
+          color: "#7f1d1d",
+          bg: "bg-tier-ohshat/30",
+          text: "text-tier-ohshat",
+        },
+      };
+
+      const DEFAULT_API = "http://localhost:8080/v1";
+      const EXAMPLE_INTENT = {
+        intent_id: "intent-amber-coast-launch-001",
+        submitted_by: "agent.launch.amber_coast",
+        action: "PUBLISH_CAMPAIGN",
+        action_description:
+          "Launch the Amber Coast reality series across eight EU countries with a co-marketing push via NetStreamX partner platforms.",
+        target_markets: ["DE", "FR", "ES", "IT", "NL", "PL", "SE", "IE"],
+        data_scope: {
+          involves_personal_data: true,
+          involves_cross_border_transfer: true,
+          data_residency_regions: ["eu-west", "eu-north"],
+        },
+        risk_context: {
+          reputational_topic: "dating-reality",
+          regulated_audience: "general",
+          children_exposure_risk: 0.12,
+        },
+        boss_inputs: {
+          security: {
+            prompt_injection_risk: 0.08,
+            cve_exposure_max_cvss: 4.2,
+            mitre_tactics_detected: 0,
+          },
+          sovereignty: {
+            data_residency_compliant: true,
+            cross_border_transfers: 3,
+            lawful_basis_documented: true,
+          },
+          financial: {
+            projected_revenue_m: 42.0,
+            projected_cost_m: 17.5,
+            single_loss_expectancy_m: 9.0,
+            annualized_rate_of_occurrence: 0.08,
+            risk_appetite_m: 5.0,
+          },
+          regulatory: {
+            primary_regulations: ["GDPR", "EU_AI_ACT"],
+            controls_passed: 43,
+            controls_total: 48,
+            open_findings_severity_max: "MEDIUM",
+          },
+          reputational: {
+            reptrak_delta: -4.0,
+            sasb_material_topics_touched: ["data_privacy", "media_ethics"],
+            esg_severity_score: 0.35,
+          },
+          rights: {
+            authorization_certainty: 0.92,
+            ownership_certainty: 0.88,
+            consent_lineage_verified: true,
+          },
+          doctrinal: {
+            doctrine_alignment: 0.78,
+            mission_fit: 0.82,
+            conflicts_with_declared_constraints: false,
+          },
+        },
+      };
+
+      function useApiConfig() {
+        const [base, setBase] = useState(DEFAULT_API);
+        const [token, setToken] = useState("");
+        useEffect(() => {
+          const savedBase = sessionStorage.getItem("boss.api.base");
+          const savedToken = sessionStorage.getItem("boss.api.token");
+          if (savedBase) setBase(savedBase);
+          if (savedToken) setToken(savedToken);
+        }, []);
+        useEffect(() => sessionStorage.setItem("boss.api.base", base), [base]);
+        useEffect(() => sessionStorage.setItem("boss.api.token", token), [token]);
+        return { base, setBase, token, setToken };
+      }
+
+      async function apiFetch(base, token, path, init = {}) {
+        const headers = new Headers(init.headers || {});
+        headers.set("accept", "application/json");
+        if (token) headers.set("authorization", `Bearer ${token}`);
+        if (init.body && !headers.has("content-type")) {
+          headers.set("content-type", "application/json");
+        }
+        const url = `${base.replace(/\/+$/, "")}${path}`;
+        const res = await fetch(url, { ...init, headers });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(`${res.status} ${res.statusText}${text ? ` — ${text}` : ""}`);
+        }
+        return res.status === 204 ? null : res.json();
+      }
+
+      function TierPill({ tier }) {
+        const meta = TIER_META[tier] || {
+          label: tier,
+          bg: "bg-slate-700/40",
+          text: "text-slate-200",
+        };
+        return <span className={`pill ${meta.bg} ${meta.text}`}>{meta.label}</span>;
+      }
+
+      function Dashboard({ config }) {
+        const [frameworks, setFrameworks] = useState(null);
+        const [dimensions, setDimensions] = useState(null);
+        const [tierConfig, setTierConfig] = useState(null);
+        const [error, setError] = useState(null);
+
+        useEffect(() => {
+          setError(null);
+          Promise.all([
+            apiFetch(config.base, config.token, "/graph/frameworks"),
+            apiFetch(config.base, config.token, "/graph/dimensions"),
+            apiFetch(config.base, config.token, "/config/tiers"),
+          ])
+            .then(([fw, dm, tc]) => {
+              setFrameworks(fw);
+              setDimensions(dm);
+              setTierConfig(tc);
+            })
+            .catch((e) => setError(e.message));
+        }, [config.base, config.token]);
+
+        if (error) {
+          return (
+            <div className="card card-padded text-tier-high text-sm">
+              API error: {error}. Start the API with{" "}
+              <code className="font-mono">uvicorn boss_api.app:create_app --factory</code> or edit
+              the base URL above.
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <StatCard label="Frameworks" value={frameworks?.length ?? "…"} />
+              <StatCard label="Dimensions" value={dimensions?.length ?? "…"} />
+              <StatCard
+                label="Top Priority"
+                value={
+                  tierConfig
+                    ? Object.entries(tierConfig.assignments).find(([, t]) => t === "Top")?.[0] ??
+                      "—"
+                    : "…"
+                }
+              />
+            </div>
+            <section className="card card-padded">
+              <h2 className="text-sm font-medium mb-3">Tier assignments</h2>
+              {tierConfig ? (
+                <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                  {DIMENSION_ORDER.map((d) => (
+                    <div
+                      key={d}
+                      className="flex items-center justify-between py-1 border-t border-slate-800/60"
+                    >
+                      <span className="capitalize">{d}</span>
+                      <span className="text-slate-300">{tierConfig.assignments[d]}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Loading…</p>
+              )}
+            </section>
+            {frameworks && (
+              <section className="card card-padded">
+                <h2 className="text-sm font-medium mb-3">Frameworks ({frameworks.length})</h2>
+                <ul className="divide-y divide-slate-800/60">
+                  {frameworks.slice(0, 12).map((fw) => (
+                    <li key={fw.key} className="py-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm">{fw.name}</div>
+                        <div className="text-xs text-slate-400 font-mono">{fw.key}</div>
+                      </div>
+                      <a
+                        href={fw.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-adam-accent hover:underline"
+                      >
+                        source ↗
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        );
+      }
+
+      function StatCard({ label, value }) {
+        return (
+          <div className="card card-padded">
+            <div className="text-[11px] uppercase tracking-widest text-slate-400">{label}</div>
+            <div className="mt-1 text-2xl font-semibold">{value}</div>
+          </div>
+        );
+      }
+
+      function ScoringPage({ config }) {
+        const [text, setText] = useState(JSON.stringify(EXAMPLE_INTENT, null, 2));
+        const [result, setResult] = useState(null);
+        const [pending, setPending] = useState(false);
+        const [error, setError] = useState(null);
+
+        const score = async () => {
+          setPending(true);
+          setError(null);
+          try {
+            const parsed = JSON.parse(text);
+            const envelope = await apiFetch(config.base, config.token, "/score", {
+              method: "POST",
+              body: JSON.stringify(parsed),
+            });
+            setResult(envelope);
+          } catch (e) {
+            setError(e.message);
+          } finally {
+            setPending(false);
+          }
+        };
+
+        const radarData = useMemo(() => {
+          if (!result) return [];
+          return DIMENSION_ORDER.map((d) => {
+            const score = result.result.dimensions.find((x) => x.dimension === d);
+            return {
+              dimension: d,
+              value: score ? score.tiered_score : 0,
+            };
+          });
+        }, [result]);
+
+        return (
+          <div className="grid md:grid-cols-2 gap-4">
+            <section className="card card-padded">
+              <h2 className="text-sm font-medium mb-2">Intent JSON</h2>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={22}
+                className="w-full bg-adam-ink border border-slate-800 rounded p-2 text-xs font-mono"
+              />
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  onClick={score}
+                  disabled={pending}
+                  className="px-4 py-2 rounded-lg bg-adam-accent text-adam-ink font-medium hover:bg-blue-400 disabled:opacity-60"
+                >
+                  {pending ? "Scoring…" : "Score intent"}
+                </button>
+                {error && <span className="text-xs text-tier-high">{error}</span>}
+              </div>
+            </section>
+            <section className="card card-padded">
+              <h2 className="text-sm font-medium mb-2">Result</h2>
+              {!result && <p className="text-sm text-slate-500">Submit an intent to see the score.</p>}
+              {result && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <TierPill tier={result.result.escalation_tier} />
+                    <span className="text-2xl font-semibold">
+                      {result.result.composite.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      decision: {result.result.decision}
+                    </span>
+                  </div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <RadarChart data={radarData} outerRadius="80%">
+                        <PolarGrid stroke="#334155" />
+                        <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 11, fill: "#cbd5f5" }} />
+                        <PolarRadiusAxis
+                          angle={30}
+                          domain={[0, 100]}
+                          tick={{ fontSize: 10, fill: "#94a3b8" }}
+                        />
+                        <Radar dataKey="value" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.35} />
+                        <Tooltip contentStyle={{ background: "#020617", border: "1px solid #1e293b" }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-slate-400">
+                      raw envelope (hash {result.result.score_hash?.slice(0, 12) ?? "—"})
+                    </summary>
+                    <pre className="bg-adam-ink border border-slate-800 rounded p-2 overflow-auto text-[11px]">
+                      {JSON.stringify(result, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              )}
+            </section>
+          </div>
+        );
+      }
+
+      function Frameworks({ config }) {
+        const [frameworks, setFrameworks] = useState(null);
+        const [error, setError] = useState(null);
+        const [query, setQuery] = useState("");
+        useEffect(() => {
+          apiFetch(config.base, config.token, "/graph/frameworks")
+            .then(setFrameworks)
+            .catch((e) => setError(e.message));
+        }, [config.base, config.token]);
+        const filtered = useMemo(() => {
+          if (!frameworks) return null;
+          const q = query.trim().toLowerCase();
+          if (!q) return frameworks;
+          return frameworks.filter(
+            (f) =>
+              f.name.toLowerCase().includes(q) ||
+              f.key.toLowerCase().includes(q) ||
+              (f.publisher ?? "").toLowerCase().includes(q),
+          );
+        }, [frameworks, query]);
+        if (error) return <div className="card card-padded text-tier-high">{error}</div>;
+        return (
+          <section className="card card-padded">
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <h2 className="text-sm font-medium">Frameworks ({filtered?.length ?? 0})</h2>
+              <input
+                placeholder="filter…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="bg-adam-ink border border-slate-800 rounded px-2 py-1 text-sm w-64"
+              />
+            </div>
+            <ul className="divide-y divide-slate-800/60">
+              {(filtered ?? []).map((fw) => (
+                <li key={fw.key} className="py-2 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">{fw.name}</div>
+                    <div className="text-[11px] text-slate-400">
+                      {fw.publisher} · <span className="font-mono">{fw.key}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={fw.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-adam-accent hover:underline"
+                  >
+                    source ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      }
+
+      function FlightRecorder({ config }) {
+        const [events, setEvents] = useState(null);
+        const [error, setError] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const load = useCallback(() => {
+          setLoading(true);
+          apiFetch(config.base, config.token, "/flightrecorder?limit=100")
+            .then((tail) => {
+              setEvents(tail);
+              setError(null);
+            })
+            .catch((e) => setError(e.message))
+            .finally(() => setLoading(false));
+        }, [config.base, config.token]);
+        useEffect(load, [load]);
+        const integrity = useMemo(() => {
+          if (!events || events.length <= 1) return true;
+          const chrono = [...events].reverse();
+          for (let i = 1; i < chrono.length; i++) {
+            if (chrono[i].prior_hash !== chrono[i - 1].event_hash) return false;
+          }
+          return true;
+        }, [events]);
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-400">
+                Hash-chained audit log.{" "}
+                {integrity ? "Chain ✓ verified." : "⚠ chain break detected."}
+              </p>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="px-3 py-1 text-sm rounded bg-slate-700 hover:bg-slate-600"
+              >
+                {loading ? "Loading…" : "Refresh"}
+              </button>
+            </div>
+            {error && <div className="card card-padded text-tier-high text-sm">{error}</div>}
+            {events && events.length === 0 && (
+              <p className="text-sm italic text-slate-500">No events yet.</p>
+            )}
+            {events && events.length > 0 && (
+              <div className="card">
+                {events.map((e) => (
+                  <div
+                    key={e.event_id}
+                    className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-slate-800/60 text-xs"
+                  >
+                    <div className="col-span-3 text-slate-300">{e.timestamp}</div>
+                    <div className="col-span-2">{e.event_type}</div>
+                    <div className="col-span-2 text-slate-400">{e.signer}</div>
+                    <div className="col-span-5 font-mono text-slate-400 leading-tight">
+                      <div>prior: {String(e.prior_hash).slice(0, 16)}…</div>
+                      <div>self: {String(e.event_hash).slice(0, 16)}…</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function App() {
+        const config = useApiConfig();
+        const [tab, setTab] = useState("dashboard");
+        const [health, setHealth] = useState("pending");
+
+        useEffect(() => {
+          fetch(`${config.base.replace(/\/+$/, "")}/healthz`)
+            .then((r) => setHealth(r.ok ? "ok" : "down"))
+            .catch(() => setHealth("down"));
+        }, [config.base]);
+
+        const tabs = [
+          { id: "dashboard", label: "Dashboard" },
+          { id: "score", label: "Score" },
+          { id: "frameworks", label: "Frameworks" },
+          { id: "flight", label: "Flight Recorder" },
+        ];
+
+        return (
+          <div className="min-h-screen">
+            <header className="border-b border-slate-800 bg-adam-navy/80 backdrop-blur sticky top-0 z-10">
+              <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-semibold">BOSS Evidence Console</span>
+                  <span className="text-[11px] uppercase tracking-widest text-slate-500">
+                    standalone
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span
+                    className={`pill ${
+                      health === "ok"
+                        ? "bg-tier-soap/30 text-tier-soap"
+                        : health === "down"
+                          ? "bg-tier-high/30 text-tier-high"
+                          : "bg-slate-700/40 text-slate-300"
+                    }`}
+                  >
+                    api · {health}
+                  </span>
+                  <input
+                    className="bg-adam-ink border border-slate-800 rounded px-2 py-1 w-64"
+                    value={config.base}
+                    onChange={(e) => config.setBase(e.target.value)}
+                    spellCheck={false}
+                  />
+                  <input
+                    className="bg-adam-ink border border-slate-800 rounded px-2 py-1 w-40"
+                    placeholder="bearer token"
+                    value={config.token}
+                    onChange={(e) => config.setToken(e.target.value)}
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+              <nav className="max-w-6xl mx-auto px-6 flex gap-1 text-sm">
+                {tabs.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={`px-3 py-2 border-b-2 ${
+                      tab === t.id
+                        ? "border-adam-accent text-white"
+                        : "border-transparent text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+            </header>
+            <main className="max-w-6xl mx-auto px-6 py-6">
+              {tab === "dashboard" && <Dashboard config={config} />}
+              {tab === "score" && <ScoringPage config={config} />}
+              {tab === "frameworks" && <Frameworks config={config} />}
+              {tab === "flight" && <FlightRecorder config={config} />}
+            </main>
+            <footer className="max-w-6xl mx-auto px-6 py-6 text-[11px] text-slate-500">
+              BOSS Engine v3.2 · ADAM project · standalone console (CDN build) · for production,
+              prefer the Vite build in this directory.
+            </footer>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>

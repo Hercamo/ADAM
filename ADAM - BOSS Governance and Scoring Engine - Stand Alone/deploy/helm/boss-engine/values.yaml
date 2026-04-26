@@ -1,0 +1,195 @@
+# Default values for boss-engine.
+#
+# These values are safe for a local cluster (k3d / minikube / kind). For
+# production, override at least:
+#   - image.repository / image.tag
+#   - ingress.hosts + ingress.tls
+#   - auth.enabled = true, auth.existingSecret / secretManager
+#   - neo4j.enabled = true (or external.neo4j)
+#   - resources.{limits,requests} to match your cluster
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/hercamo/boss-engine
+  tag: "3.2.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/v1/metrics"
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: boss.adam.example.com
+      paths:
+        - path: /v1
+          pathType: Prefix
+        - path: /ui
+          pathType: Prefix
+  tls:
+    - secretName: boss-engine-tls
+      hosts:
+        - boss.adam.example.com
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: boss-engine
+        app.kubernetes.io/component: api
+
+probes:
+  liveness:
+    path: /v1/healthz
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 4
+  readiness:
+    path: /v1/readyz
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    path: /v1/healthz
+    failureThreshold: 30
+    periodSeconds: 2
+
+# Non-secret configuration — copied into the ConfigMap. Keys map 1:1 to
+# environment variables read by boss_api.config.Settings.
+config:
+  BOSS_ENV: "production"
+  BOSS_LOG_LEVEL: "INFO"
+  BOSS_API_PREFIX: "/v1"
+  BOSS_SERVICE_NAME: "boss-engine"
+  BOSS_METRICS_ENABLED: "true"
+  BOSS_FLIGHT_RECORDER_PATH: "/var/lib/boss/flight-recorder.jsonl"
+  BOSS_FLIGHT_RECORDER_TAIL: "1"
+  BOSS_CORS_ORIGINS: "https://boss.adam.example.com"
+  BOSS_AUTH_ENABLED: "true"
+  BOSS_JWT_ISSUER: "adam-issuer"
+  BOSS_JWT_AUDIENCE: "boss-engine"
+  BOSS_OTEL_ENDPOINT: ""
+
+# Bearer auth / signing secret.
+# Prefer existingSecret (rotated by External Secrets Operator or Vault).
+auth:
+  enabled: true
+  existingSecret: ""     # Name of a pre-created Secret with BOSS_JWT_SECRET + BOSS_ADMIN_TOKENS
+  # Only used if existingSecret is empty. NEVER ship defaults to production.
+  jwtSecret: "change-me-to-a-32-byte-random-string"
+  adminTokens: "change-me-to-a-long-random-string"
+
+# Optional built-in Neo4j. Set to true if you want the chart to deploy a
+# StatefulSet; most production clusters will point `external.neo4j` at a
+# managed instance instead.
+neo4j:
+  enabled: false
+  image: neo4j:5.23-community
+  password: "change-me"
+  persistence:
+    dataSize: 10Gi
+    logsSize: 2Gi
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "1Gi"
+    limits:
+      cpu: "1500m"
+      memory: "2Gi"
+
+external:
+  neo4j:
+    uri: ""       # e.g. "neo4j+s://graph.adam.example.com:7687"
+    user: ""
+    database: "boss"
+    existingSecret: ""   # optional: reads BOSS_NEO4J_PASSWORD from this Secret
+
+graphSeedJob:
+  enabled: true
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    additionalLabels:
+      release: prometheus
+    interval: 30s
+    scrapeTimeout: 10s
+
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+
+networkPolicy:
+  enabled: true
+  # Which namespaces are allowed to call the engine.
+  allowedCallerNamespaces:
+    - name: adam-mesh

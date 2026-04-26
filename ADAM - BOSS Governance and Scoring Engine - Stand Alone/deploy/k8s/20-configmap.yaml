@@ -1,0 +1,32 @@
+---
+# Non-secret runtime configuration for the engine. Secret material (JWT
+# signing keys, Neo4j credentials, admin bootstrap tokens) lives in the
+# companion Secret, not here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: boss-engine-config
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/part-of: adam
+data:
+  BOSS_ENV: "production"
+  BOSS_LOG_LEVEL: "INFO"
+  BOSS_API_PREFIX: "/v1"
+  BOSS_SERVICE_NAME: "boss-engine"
+  BOSS_METRICS_ENABLED: "true"
+  BOSS_FLIGHT_RECORDER_PATH: "/var/lib/boss/flight-recorder.jsonl"
+  BOSS_FLIGHT_RECORDER_TAIL: "1"
+  # Comma-separated list of origins allowed to call the API from browsers.
+  # Tighten this in production; the default below matches the in-cluster
+  # console Service only.
+  BOSS_CORS_ORIGINS: "http://boss-engine-console.boss-engine.svc.cluster.local"
+  BOSS_AUTH_ENABLED: "true"
+  BOSS_JWT_ISSUER: "adam-issuer"
+  BOSS_JWT_AUDIENCE: "boss-engine"
+  # Neo4j connection is configured via Secret; this key just pins the
+  # database name the engine should use when auth is present.
+  BOSS_NEO4J_DATABASE: "boss"
+  # OpenTelemetry collector address (set to "" to disable).
+  BOSS_OTEL_ENDPOINT: ""

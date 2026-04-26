@@ -1,0 +1,66 @@
+---
+# One-shot Job that applies schema.cypher and seed.cypher against the
+# configured Neo4j. Safe to re-run — the seed uses MERGE statements and
+# the schema uses IF NOT EXISTS.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: boss-graph-seed
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/component: graph-seed
+    app.kubernetes.io/part-of: adam
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: boss-engine
+        app.kubernetes.io/component: graph-seed
+        app.kubernetes.io/part-of: adam
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: boss-engine
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed
+          image: ghcr.io/hercamo/boss-engine:3.2.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - "python"
+            - "-m"
+            - "boss_graph.loader"
+            - "--uri"
+            - "$(BOSS_NEO4J_URI)"
+            - "--user"
+            - "$(BOSS_NEO4J_USER)"
+            - "--password"
+            - "$(BOSS_NEO4J_PASSWORD)"
+            - "--schema"
+            - "/opt/boss/share/boss_graph/schema.cypher"
+            - "--seed"
+            - "/opt/boss/share/boss_graph/seed.cypher"
+          envFrom:
+            - secretRef:
+                name: boss-engine-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

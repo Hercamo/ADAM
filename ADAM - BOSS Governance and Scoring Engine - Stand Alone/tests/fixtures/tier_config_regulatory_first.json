@@ -1,0 +1,13 @@
+{
+  "assignments": {
+    "security": "Very High",
+    "sovereignty": "Very High",
+    "financial": "Very High",
+    "regulatory": "Top",
+    "reputational": "High",
+    "rights": "High",
+    "doctrinal": "Medium"
+  },
+  "author": "director.regulatory",
+  "reason": "Pilot regulatory-first configuration for EU operations."
+}

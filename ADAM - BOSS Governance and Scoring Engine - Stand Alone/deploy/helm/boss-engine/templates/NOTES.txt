@@ -1,0 +1,57 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║ BOSS AI Governance & Risk Engine installed                           ║
+║ part of ADAM — Autonomy Doctrine & Architecture Model                 ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Chart: {{ include "boss-engine.chart" . }}
+API version: {{ .Chart.AppVersion }}
+
+1. Get the API endpoint:
+
+{{- if .Values.ingress.enabled }}
+   The Ingress is enabled. Expose via your configured host(s):
+   {{- range .Values.ingress.hosts }}
+   https://{{ .host }}/v1/healthz
+   {{- end }}
+
+{{- else if contains "LoadBalancer" .Values.service.type }}
+   kubectl --namespace {{ .Release.Namespace }} get svc {{ include "boss-engine.fullname" . }}
+   The service will provide an external IP. Until then:
+   kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "boss-engine.fullname" . }} 8080:{{ .Values.service.port }}
+   open http://localhost:8080/v1/healthz
+
+{{- else }}
+   kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "boss-engine.fullname" . }} 8080:{{ .Values.service.port }}
+   open http://localhost:8080/v1/healthz
+{{- end }}
+
+2. Sanity-check the score path (no auth required when auth.enabled=false):
+
+   curl -sS http://localhost:8080/v1/frameworks | jq '. | length'
+   # expect: 19
+
+3. Every mutation is written to the Flight Recorder as a hash-chained
+   event. Tail it with:
+
+   kubectl --namespace {{ .Release.Namespace }} exec deploy/{{ include "boss-engine.fullname" . }} -- \
+     cat /var/lib/boss/flight-recorder.jsonl | tail -n 5
+
+{{- if .Values.auth.enabled }}
+
+4. Auth is ENABLED. Bearer tokens are read from Secret
+   '{{ include "boss-engine.secretName" . }}'. Pass one as:
+
+   curl -H "authorization: Bearer $TOKEN" http://localhost:8080/v1/readyz
+{{- end }}
+
+{{- if and (not .Values.neo4j.enabled) (not .Values.external.neo4j.uri) }}
+
+5. Neo4j is NOT wired — the engine is running with the in-memory graph.
+   Enable 'neo4j.enabled=true' or point 'external.neo4j.uri' at a real
+   Neo4j to persist the doctrine graph across restarts.
+{{- end }}
+
+See https://github.com/Hercamo/ADAM for the ADAM reference architecture
+and the full BOSS v3.2 specification.

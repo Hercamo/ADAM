@@ -1,0 +1,20 @@
+---
+# BOSS AI Governance & Risk Engine — namespace.
+#
+# Keeping the engine in a dedicated namespace lets you scope RBAC, network
+# policies, and pod security admission at the namespace boundary — the
+# operational convention the ADAM reference architecture assumes for every
+# governance-grade service.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/part-of: adam
+    adam.dimension: doctrinal
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    adam.project/purpose: "Run the BOSS scoring, exception, and receipt service in a hardened namespace."

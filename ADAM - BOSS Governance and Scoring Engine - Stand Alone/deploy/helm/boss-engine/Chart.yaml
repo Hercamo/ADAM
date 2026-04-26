@@ -1,0 +1,35 @@
+apiVersion: v2
+name: boss-engine
+description: |
+  BOSS AI Governance & Risk Engine — the standalone scoring, exception,
+  and evidence service from the ADAM (Autonomy Doctrine & Architecture
+  Model) project. Produces BOSS composite scores across seven governance
+  dimensions, opens exception packets, records hash-chained receipts, and
+  appends to an immutable Flight Recorder.
+type: application
+version: 3.2.0
+appVersion: "3.2.0"
+kubeVersion: ">=1.27.0-0"
+keywords:
+  - ai-governance
+  - agent-governance
+  - risk-scoring
+  - adam
+  - boss
+  - eu-ai-act
+  - dora
+  - nis2
+  - iso-42001
+home: https://github.com/Hercamo/ADAM
+sources:
+  - https://github.com/Hercamo/ADAM
+maintainers:
+  - name: ADAM Project — BOSS Working Group
+    url: https://github.com/Hercamo/ADAM
+icon: https://raw.githubusercontent.com/Hercamo/ADAM/main/assets/boss-engine.png
+annotations:
+  artifacthub.io/category: security
+  artifacthub.io/license: ADAM-Copyright-and-Use-Agreement
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Helm chart for the BOSS Engine v3.2.

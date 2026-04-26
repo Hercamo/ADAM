@@ -1,0 +1,137 @@
+# Local development stack for the BOSS AI Governance & Risk Engine.
+#
+# Usage:
+#   docker compose up --build                 # engine only (in-memory graph)
+#   docker compose --profile graph up --build # engine + Neo4j data graph
+#   docker compose --profile adapters up      # engine + a LangGraph demo container
+#
+# The engine reads its full configuration from the environment. Only the
+# variables you need to override for your laptop should be set here; the
+# rest keep their defaults from boss_api/config.py.
+
+name: boss-engine
+
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: boss-engine:local
+    restart: unless-stopped
+    ports:
+      - "${BOSS_PORT:-8080}:8080"
+    environment:
+      BOSS_ENV: development
+      BOSS_LOG_LEVEL: INFO
+      BOSS_CORS_ORIGINS: "http://localhost:5173,http://localhost:8080"
+      BOSS_AUTH_ENABLED: "false"
+      BOSS_ADMIN_TOKENS: "dev-token-change-me"
+      BOSS_FLIGHT_RECORDER_PATH: "/var/lib/boss/flight-recorder.jsonl"
+      BOSS_METRICS_ENABLED: "true"
+      # Graph wiring is optional. If these are blank, the engine falls back
+      # to the in-memory graph (schema + seed applied on boot).
+      BOSS_NEO4J_URI: ""
+      BOSS_NEO4J_USER: "neo4j"
+      BOSS_NEO4J_PASSWORD: ""
+    volumes:
+      - boss-data:/var/lib/boss
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/v1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # Read-only rootfs with explicit writable scratch; matches the K8s deploy.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  console:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: sh -lc "npm install --no-audit --no-progress && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      BOSS_API_URL: "http://engine:8080"
+    volumes:
+      - ./boss_console:/app
+      - console-node-modules:/app/node_modules
+    depends_on:
+      engine:
+        condition: service_healthy
+    profiles: [console]
+
+  neo4j:
+    image: neo4j:5.23-community
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: "neo4j/boss-dev-password"
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "1G"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p boss-dev-password 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    profiles: [graph, full]
+
+  graph-seed:
+    image: boss-engine:local
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      BOSS_NEO4J_URI: "bolt://neo4j:7687"
+      BOSS_NEO4J_USER: "neo4j"
+      BOSS_NEO4J_PASSWORD: "boss-dev-password"
+    command:
+      - python
+      - -m
+      - boss_graph.loader
+      - --uri
+      - bolt://neo4j:7687
+      - --user
+      - neo4j
+      - --password
+      - boss-dev-password
+      - --schema
+      - /opt/boss/share/boss_graph/schema.cypher
+      - --seed
+      - /opt/boss/share/boss_graph/seed.cypher
+    profiles: [graph, full]
+    restart: "no"
+
+  langgraph-demo:
+    image: python:3.12-slim
+    working_dir: /app
+    command: ["python", "/app/example_langgraph.py"]
+    environment:
+      BOSS_API_URL: "http://engine:8080"
+    volumes:
+      - ./examples:/app
+      - ./boss_adapters:/app/boss_adapters:ro
+      - ./boss_core:/app/boss_core:ro
+    depends_on:
+      engine:
+        condition: service_healthy
+    profiles: [adapters, full]
+    restart: "no"
+
+volumes:
+  boss-data:
+  neo4j-data:
+  neo4j-logs:
+  console-node-modules:

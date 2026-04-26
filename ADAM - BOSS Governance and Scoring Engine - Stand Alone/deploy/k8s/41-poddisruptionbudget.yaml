@@ -1,0 +1,19 @@
+---
+# Keep at least one engine pod alive during voluntary disruptions (node
+# drains, rolling upgrades). This matches the ADAM requirement that the
+# scoring path must never be fully offline during planned maintenance.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: boss-engine
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: adam
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: boss-engine
+      app.kubernetes.io/component: api

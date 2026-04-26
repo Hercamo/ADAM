@@ -1,0 +1,166 @@
+# BOSS Data Graph — read-only GraphQL view
+#
+# This schema is a reference projection of the Neo4j property graph
+# maintained by the BOSS AI Governance & Risk Engine. It is intended
+# to be served by a GraphQL gateway (e.g., neo4j-graphql-js, Hasura,
+# or a thin FastAPI+Strawberry resolver) so that auditors, directors,
+# and downstream tools can query the governance catalog without having
+# to write Cypher.
+#
+# The view is READ-ONLY. Mutations flow through the BOSS API
+# (/v1/score, /v1/exceptions, /v1/receipts, /v1/config/tiers).
+
+schema {
+  query: Query
+}
+
+type Query {
+  "Return every framework registered in the graph."
+  frameworks: [Framework!]!
+
+  "Return a single framework by key (e.g. 'nist_csf')."
+  framework(key: String!): Framework
+
+  "Return every regulatory instrument tracked by the engine."
+  regulations: [Regulation!]!
+
+  "Return all seven BOSS dimensions with attribution."
+  dimensions: [Dimension!]!
+
+  "Return the priority-tier ladder (Top .. Very Low)."
+  tiers: [Tier!]!
+
+  "Return the escalation-tier ladder (SOAP .. OHSHAT)."
+  escalationTiers: [EscalationTier!]!
+
+  "Return the director constitution."
+  directors: [Director!]!
+
+  "Look up an Intent by intent_id."
+  intent(intentId: ID!): Intent
+
+  "Look up a BOSS scoring Result by result_id."
+  result(resultId: ID!): Result
+
+  "Look up an Exception Packet by packet_id."
+  exceptionPacket(packetId: ID!): ExceptionPacket
+
+  "Look up a signed Decision Receipt by receipt_id."
+  decisionReceipt(receiptId: ID!): DecisionReceipt
+
+  "Page through hash-chained Flight Recorder events."
+  flightRecorder(
+    eventType: String
+    limit: Int = 100
+    sinceIso8601: String
+  ): [FlightRecorderEvent!]!
+}
+
+# ---------------------------------------------------------------------------
+# Catalog types
+# ---------------------------------------------------------------------------
+
+type Framework {
+  key: ID!
+  name: String!
+  publisher: String!
+  url: String!
+  version: String
+  dimensions: [Dimension!]!
+  regulations: [Regulation!]!
+}
+
+type Regulation {
+  key: ID!
+  name: String!
+  jurisdiction: String!
+  instrument: String!
+  derivedFrom: Framework!
+}
+
+type Tier {
+  name: ID!
+  weight: Float!
+  description: String!
+}
+
+type EscalationTier {
+  name: ID!
+  lower: Float!
+  upper: Float!
+  slaMinutes: Int!
+  description: String!
+}
+
+type Dimension {
+  key: ID!
+  name: String!
+  description: String!
+  defaultTier: Tier!
+  frameworks: [Framework!]!
+  accountableDirectors: [Director!]!
+}
+
+type Director {
+  id: ID!
+  title: String!
+  scope: String!
+  accountableFor: [Dimension!]!
+}
+
+# ---------------------------------------------------------------------------
+# Runtime types
+# ---------------------------------------------------------------------------
+
+type Intent {
+  intentId: ID!
+  tenant: String!
+  riskTolerance: String!
+  summary: String!
+  registeredAt: String!
+  result: Result
+  exceptionPacket: ExceptionPacket
+}
+
+type Result {
+  resultId: ID!
+  intentId: ID!
+  composite: Float!
+  tier: EscalationTier!
+  dimensions: [DimensionScore!]!
+  computedAt: String!
+}
+
+type DimensionScore {
+  dimension: Dimension!
+  score: Float!
+  notes: String
+}
+
+type ExceptionPacket {
+  packetId: ID!
+  resultId: ID!
+  tier: EscalationTier!
+  createdAt: String!
+  proposedAlternative: String
+  decisionReceipt: DecisionReceipt
+}
+
+type DecisionReceipt {
+  receiptId: ID!
+  packetId: ID!
+  decision: String!
+  approver: Director!
+  signedAt: String!
+  priorHash: String!
+  receiptHash: String!
+}
+
+type FlightRecorderEvent {
+  eventId: ID!
+  eventType: String!
+  timestamp: String!
+  payload: String!
+  priorHash: String!
+  eventHash: String!
+}

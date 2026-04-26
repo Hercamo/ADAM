@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose an enhancement to the BOSS Engine.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem you're trying to solve
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: governance
+    attributes:
+      label: Governance impact
+      options:
+        - label: "This change affects scoring math (BOSS formula)."
+        - label: "This change affects audit outputs (Flight Recorder, Receipts)."
+        - label: "This change widens the attack surface (new network egress, new public endpoint)."
+        - label: "This change requires a new framework or regulation in the data graph."

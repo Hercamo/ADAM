@@ -1,0 +1,32 @@
+---
+# Prometheus Operator ServiceMonitor. Delete this file if you don't run
+# the Prometheus Operator; the raw /v1/metrics endpoint still works with
+# the classic prometheus.io/scrape annotations on the pod.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: boss-engine
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/part-of: adam
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: boss-engine
+      app.kubernetes.io/component: api
+  namespaceSelector:
+    matchNames:
+      - boss-engine
+  endpoints:
+    - port: http
+      path: /v1/metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node

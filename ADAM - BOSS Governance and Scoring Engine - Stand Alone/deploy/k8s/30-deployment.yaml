@@ -1,0 +1,142 @@
+---
+# BOSS Engine Deployment. Runs 2 replicas by default; combine with the HPA
+# in 40-hpa.yaml for autoscaling.
+#
+# Security posture:
+#   - runAsNonRoot + UID 1000 (matches the Dockerfile)
+#   - read-only root filesystem
+#   - dropped capabilities, seccomp: RuntimeDefault
+#   - writable /var/lib/boss emptyDir for the Flight Recorder (use a PVC in
+#     production if you need durability beyond pod lifetime)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boss-engine
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: adam
+    app.kubernetes.io/version: "3.2.0"
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: boss-engine
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: boss-engine
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: adam
+        app.kubernetes.io/version: "3.2.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/v1/metrics"
+    spec:
+      serviceAccountName: boss-engine
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: boss-engine
+              app.kubernetes.io/component: api
+      containers:
+        - name: api
+          image: ghcr.io/hercamo/boss-engine:3.2.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - "uvicorn"
+            - "boss_api.app:create_app"
+            - "--factory"
+            - "--host=0.0.0.0"
+            - "--port=8080"
+            - "--workers=2"
+            - "--proxy-headers"
+            - "--forwarded-allow-ips=*"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: boss-engine-config
+            - secretRef:
+                name: boss-engine-secrets
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /v1/healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          readinessProbe:
+            httpGet:
+              path: /v1/readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /v1/healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: flight-recorder
+              mountPath: /var/lib/boss
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: flight-recorder
+          emptyDir:
+            sizeLimit: 512Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi

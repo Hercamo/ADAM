@@ -1,0 +1,83 @@
+---
+# Default-deny network policy for the boss-engine namespace. Only the
+# expected traffic is allowed:
+#   - Ingress on 8080/TCP from pods in namespaces labeled
+#     adam.project/caller=allowed, plus the in-cluster ingress controller.
+#   - Egress to DNS (UDP 53) and the declared Neo4j + OTEL endpoints.
+#
+# If your service mesh handles pod-to-pod authorization, you can relax
+# these, but keep at least the default-deny baseline.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: boss-engine-default-deny
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/part-of: adam
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: boss-engine-allow-api
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/part-of: adam
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: boss-engine
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              adam.project/caller: allowed
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Neo4j bolt (+s)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: neo4j
+              app.kubernetes.io/part-of: adam
+      ports:
+        - protocol: TCP
+          port: 7687
+    # OTEL collector (if enabled)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opentelemetry-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318

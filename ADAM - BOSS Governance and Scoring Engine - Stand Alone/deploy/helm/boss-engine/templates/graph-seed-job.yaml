@@ -1,0 +1,76 @@
+{{- if and .Values.graphSeedJob.enabled (or .Values.neo4j.enabled .Values.external.neo4j.uri) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "boss-engine.fullname" . }}-graph-seed
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "boss-engine.labels" . | nindent 4 }}
+    app.kubernetes.io/component: graph-seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "boss-engine.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: graph-seed
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "boss-engine.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "python"
+            - "-m"
+            - "boss_graph.loader"
+            - "--uri"
+            - "$(BOSS_NEO4J_URI)"
+            - "--user"
+            - "$(BOSS_NEO4J_USER)"
+            - "--password"
+            - "$(BOSS_NEO4J_PASSWORD)"
+            - "--schema"
+            - "/opt/boss/share/boss_graph/schema.cypher"
+            - "--seed"
+            - "/opt/boss/share/boss_graph/seed.cypher"
+          envFrom:
+            - configMapRef:
+                name: {{ include "boss-engine.fullname" . }}-config
+            {{- if .Values.neo4j.enabled }}
+            - secretRef:
+                name: {{ include "boss-engine.fullname" . }}-neo4j-auth
+            {{- else if .Values.external.neo4j.existingSecret }}
+            - secretRef:
+                name: {{ .Values.external.neo4j.existingSecret }}
+            {{- else if .Values.auth.enabled }}
+            - secretRef:
+                name: {{ include "boss-engine.secretName" . }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+{{- end }}

@@ -1,0 +1,42 @@
+---
+# Example Ingress for the engine. Swap the host for your DNS, add your
+# TLS Secret, and mount the IngressClass your cluster uses.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: boss-engine
+  namespace: boss-engine
+  labels:
+    app.kubernetes.io/name: boss-engine
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: adam
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+    # Keep request headers small — the scoring payloads are small JSON.
+    nginx.ingress.kubernetes.io/large-client-header-buffers: "4 16k"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - boss.adam.example.com
+      secretName: boss-engine-tls
+  rules:
+    - host: boss.adam.example.com
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: boss-engine
+                port:
+                  number: 80
+          - path: /ui
+            pathType: Prefix
+            backend:
+              service:
+                name: boss-engine
+                port:
+                  number: 80

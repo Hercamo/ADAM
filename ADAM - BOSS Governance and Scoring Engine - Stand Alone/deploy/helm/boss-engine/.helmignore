@@ -1,0 +1,15 @@
+.DS_Store
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+OWNERS
+OWNERS_ALIASES
+*~
+# Helm release files
+charts/*.tgz

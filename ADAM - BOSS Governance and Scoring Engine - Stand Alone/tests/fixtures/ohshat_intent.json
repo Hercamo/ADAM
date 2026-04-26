@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "user_id": "agent.launch.amber_coast",
+    "role": "system"
+  },
+  "headline": "Launch Amber Coast EU campaign (under active attack)",
+  "description": "Same launch as Amber Coast, but the security dimension is under live exploitation and several regulatory controls have failed.",
+  "is_non_idempotent": true,
+  "dimension_inputs": {
+    "security": {
+      "prompt_injection_risk": 0.85,
+      "cve_exposure_max_cvss": 9.6,
+      "mitre_tactics_detected": 5
+    },
+    "sovereignty": {
+      "data_residency_compliant": true,
+      "cross_border_transfers": 3,
+      "lawful_basis_documented": true
+    },
+    "financial": {
+      "projected_revenue_m": 42.0,
+      "projected_cost_m": 17.5,
+      "single_loss_expectancy_m": 9.0,
+      "annualized_rate_of_occurrence": 0.08,
+      "risk_appetite_m": 5.0
+    },
+    "regulatory": {
+      "primary_regulations": ["GDPR", "EU_AI_ACT", "DORA"],
+      "controls_passed": 10,
+      "controls_total": 50,
+      "open_findings_severity_max": "CRITICAL"
+    },
+    "reputational": {
+      "reptrak_delta": -4.0,
+      "sasb_material_topics_touched": ["data_privacy", "media_ethics"],
+      "esg_severity_score": 0.35
+    },
+    "rights": {
+      "authorization_certainty": 0.92,
+      "ownership_certainty": 0.88,
+      "consent_lineage_verified": true
+    },
+    "doctrinal": {
+      "doctrine_alignment": 0.78,
+      "mission_fit": 0.82,
+      "conflicts_with_declared_constraints": false
+    }
+  }
+}
