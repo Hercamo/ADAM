@@ -1,0 +1,10 @@
+{{- range $ns := list "adam-system" "adam-core" "adam-constitution" "adam-agents" "adam-observability" }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $ns }}
+  labels:
+    adam.layer: "{{ trimPrefix "adam-" $ns }}"
+    {{- include "adam.labels" $ | nindent 4 }}
+---
+{{- end }}

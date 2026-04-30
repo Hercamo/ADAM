@@ -1,0 +1,40 @@
+
+==== QA Smoke ==== 37/37 passed ====
+
+PASS index.html parses
+PASS has all 4 quadrant panels
+PASS brand mark rendered
+PASS footer present
+PASS ADAM_DEMO global loaded
+PASS demo has 5 directors
+PASS demo has 7 agent classes
+PASS demo has 81 agents total  -  got 81
+PASS group-grid populated
+PASS queue list rendered
+PASS director roster rendered
+PASS twin grid has 4 cards
+PASS routing cells rendered
+PASS flight recorder tail has rows
+PASS mesh totals populated
+PASS agent tiles count == 81  -  got 81
+PASS mix of statuses rendered
+PASS first queue item has tier class
+PASS approve button present
+PASS reject button present
+PASS main grid has aria-label or role
+PASS inputs have aria-label
+PASS modal has aria-modal
+PASS all images have alt or aria hidden
+PASS click opens detail modal
+PASS modal approve has intent id
+PASS approve removes row from queue  -  prev=5 next=4
+PASS reject button exists for inline test
+PASS inline reject button actually works  -  before=4 after=3
+PASS inline button click does not open modal
+PASS intent submit produced response
+PASS intent submit surfaces tier
+PASS fuzzy text search returns a narrative or picker
+PASS ambiguous query presents a picker with multiple options  -  got 3
+PASS clicking a picker option renders the packet
+PASS session-submitted intents are searchable by their own words
+PASS director filter narrows queue

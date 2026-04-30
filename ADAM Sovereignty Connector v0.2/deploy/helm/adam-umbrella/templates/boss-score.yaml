@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: boss-score-config, namespace: adam-core }
+data:
+  version.txt: |
+    {{ .Values.bossScore.version | default "3.2" }}
+  weight_sum.txt: |
+    {{ .Values.bossScore.weightSum | default 24.0 }}
+  dimensions.json: |
+    {{- toJson .Values.bossScore.dimensions | nindent 4 }}
+  priority_tiers.json: |
+    {{- toJson .Values.bossScore.priorityTiers | nindent 4 }}
+  tiers.json: |
+    {{- toJson .Values.bossScore.tiers | nindent 4 }}
+  overrides.json: |
+    {
+      "critical_dimension_override": {{- toJson .Values.bossScore.criticalDimensionOverride }},
+      "non_idempotent_penalty":      {{- toJson .Values.bossScore.nonIdempotentPenalty }}
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boss-score
+  namespace: adam-core
+  labels:
+    adam.component: boss-score
+    {{- include "adam.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.bossScore.replicas }}
+  selector: { matchLabels: { adam.component: boss-score } }
+  template:
+    metadata:
+      labels: { adam.component: boss-score }
+    spec:
+      containers:
+        - name: boss-score
+          image: {{ .Values.bossScore.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          volumeMounts: [{ name: dims, mountPath: /etc/boss }]
+      volumes:
+        - name: dims
+          configMap: { name: boss-score-config }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: boss-score, namespace: adam-core }
+spec:
+  selector: { adam.component: boss-score }
+  ports: [{ port: 8080, targetPort: 8080 }]

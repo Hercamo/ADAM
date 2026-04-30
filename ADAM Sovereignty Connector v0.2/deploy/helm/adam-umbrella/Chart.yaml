@@ -1,0 +1,16 @@
+apiVersion: v2
+name: adam-umbrella
+description: |
+  Umbrella chart that deploys the ADAM Doctrine skeleton inside a single
+  k3d cluster for sovereign, air-gapped deployments. Composed of five
+  sub-releases: constitution (5 canonical Directors), core (CORE Engine),
+  boss-score (BOSS v3.2 canonical 7 dimensions), flight-recorder, and
+  agent-mesh (81+ agents across 7 canonical classes). Aligned with ADAM
+  book v1.4.
+type: application
+version: 1.1.0
+appVersion: "1.1.0"
+keywords: [adam, autonomy, sovereignty, k3d, boss-v3.2]
+home: https://example.invalid/adam
+maintainers:
+  - name: ADAM Project

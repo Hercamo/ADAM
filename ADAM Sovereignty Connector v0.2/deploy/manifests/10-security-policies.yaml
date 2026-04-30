@@ -1,0 +1,77 @@
+# Baseline RBAC + NetworkPolicies for the ADAM skeleton.
+# Default posture: deny all cross-namespace traffic; explicit allow-lists below.
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: adam-core, namespace: adam-core }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: adam-constitution, namespace: adam-constitution }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: adam-agent, namespace: adam-agents }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: adam-core }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: adam-constitution }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: adam-agents }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Allow adam-agents to call CORE Engine and BOSS Score via Service DNS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-agent-to-core, namespace: adam-core }
+spec:
+  podSelector: { matchLabels: { adam.component: core-engine } }
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { adam.layer: "agents" } }
+      ports: [{ protocol: TCP, port: 8080 }]
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-directors-to-core, namespace: adam-core }
+spec:
+  podSelector: { matchLabels: { adam.component: core-engine } }
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { adam.layer: "constitution" } }
+      ports: [{ protocol: TCP, port: 8080 }]
+  policyTypes: [Ingress]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: { name: adam-read, namespace: adam-core }
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: { name: adam-read, namespace: adam-core }
+subjects:
+  - kind: ServiceAccount
+    name: adam-constitution
+    namespace: adam-constitution
+roleRef:
+  kind: Role
+  name: adam-read
+  apiGroup: rbac.authorization.k8s.io

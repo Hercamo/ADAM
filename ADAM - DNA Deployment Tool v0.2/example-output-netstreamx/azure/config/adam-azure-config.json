@@ -1,0 +1,205 @@
+{
+  "adam_deployment": {
+    "platform": "azure",
+    "company": "NetStreamX",
+    "version": "1.4",
+    "generated": "2026-04-20",
+    "dna_questionnaire_version": "1.0",
+    "boss_formulas_version": "3.2"
+  },
+  "governance_plane": {
+    "core_engine": {
+      "database": "cosmos-db-gremlin",
+      "throughput_ru": 100000,
+      "multi_region": true,
+      "consistency": "BoundedStaleness"
+    },
+    "policy_enforcement": {
+      "engine": "opa-gatekeeper",
+      "evaluation_target": "100K/sec"
+    },
+    "boss_scoring": {
+      "engine": "azure-data-explorer",
+      "dimensions": {
+        "security_impact": 5.0,
+        "sovereignty_action": 4.0,
+        "financial_exposure": 4.0,
+        "regulatory_impact": 3.0,
+        "reputational_risk": 3.0,
+        "rights_certainty": 3.0,
+        "doctrinal_alignment": 2.0
+      },
+      "thresholds": {
+        "soap": {
+          "min": 0,
+          "max": 10,
+          "label": "SOAP - Safe & Optimum Autonomous Performance"
+        },
+        "moderate": {
+          "min": 11,
+          "max": 30,
+          "label": "MODERATE - Constrained Execution"
+        },
+        "elevated": {
+          "min": 31,
+          "max": 50,
+          "label": "ELEVATED - Exception Likely"
+        },
+        "high": {
+          "min": 51,
+          "max": 75,
+          "label": "HIGH - Director Review Required"
+        },
+        "ohshat": {
+          "min": 76,
+          "max": 100,
+          "label": "OHSHAT - Operational Hell, Send Humans Act Today!"
+        }
+      },
+      "_comment": "ADAM BOSS v3.2 canonical 7-dimension set. Denominator \u03a3 = 24.0. Top=5.0 (Security), Very High=4.0 (Sovereignty, Financial), High=3.0 (Regulatory, Reputational, Rights), Medium=2.0 (Doctrinal).",
+      "priority_tiers": {
+        "security_impact": "Top",
+        "sovereignty_action": "Very High",
+        "financial_exposure": "Very High",
+        "regulatory_impact": "High",
+        "reputational_risk": "High",
+        "rights_certainty": "High",
+        "doctrinal_alignment": "Medium"
+      },
+      "weight_sum": 24.0,
+      "composite_formula": "weighted_average",
+      "non_idempotent_penalty": 15,
+      "non_idempotent_penalty_type": "additive_flat",
+      "critical_dimension_override_threshold": 75
+    },
+    "flight_recorder": {
+      "storage": "azure-blob-immutable",
+      "ledger": "azure-confidential-ledger",
+      "retention_years": 7
+    },
+    "crypto_vault": {
+      "service": "azure-key-vault-premium",
+      "hsm": true
+    }
+  },
+  "agent_mesh": {
+    "orchestration": "aks",
+    "total_agents": "81+",
+    "total_vcpus": 3180,
+    "total_ram_gb": 12720,
+    "gpu_agents": 42,
+    "node_pools": {
+      "governance": {
+        "vm_size": "Standard_D16s_v5",
+        "min": 3,
+        "max": 10
+      },
+      "agent_mesh": {
+        "vm_size": "Standard_D32s_v5",
+        "min": 5,
+        "max": 50
+      },
+      "gpu": {
+        "vm_size": "Standard_NC24ads_A100_v4",
+        "min": 2,
+        "max": 20
+      },
+      "human_interface": {
+        "vm_size": "Standard_D8s_v5",
+        "min": 2,
+        "max": 10
+      }
+    },
+    "reference_count": 81
+  },
+  "ai_services": {
+    "provider": "azure-openai",
+    "models": {
+      "reasoning": {
+        "model": "gpt-4o",
+        "tpm": 450000
+      },
+      "execution": {
+        "model": "gpt-4o-mini",
+        "tpm": 1000000
+      },
+      "deep_reasoning": {
+        "model": "o1",
+        "tpm": 100000
+      }
+    }
+  },
+  "networking": {
+    "topology": "hub-spoke",
+    "governance_isolation": true,
+    "private_endpoints": true,
+    "no_public_internet": [
+      "governance",
+      "data"
+    ]
+  },
+  "boss_config": {
+    "schema_version": "v3.2",
+    "aligned_with": "ADAM book v1.4",
+    "dimensions": {
+      "security_impact": 5.0,
+      "sovereignty_action": 4.0,
+      "financial_exposure": 4.0,
+      "regulatory_impact": 3.0,
+      "reputational_risk": 3.0,
+      "rights_certainty": 3.0,
+      "doctrinal_alignment": 2.0
+    },
+    "priority_tiers": {
+      "security_impact": "Top",
+      "sovereignty_action": "Very High",
+      "financial_exposure": "Very High",
+      "regulatory_impact": "High",
+      "reputational_risk": "High",
+      "rights_certainty": "High",
+      "doctrinal_alignment": "Medium"
+    },
+    "composite_formula": {
+      "type": "weighted_average",
+      "weight_sum": 24.0,
+      "formula": "C = (S_sec*5.0 + S_sov*4.0 + S_fin*4.0 + S_reg*3.0 + S_rep*3.0 + S_rights*3.0 + S_doc*2.0) / 24.0",
+      "critical_dimension_override": {
+        "threshold": 75,
+        "floor_offset": -10
+      },
+      "non_idempotent_penalty": {
+        "type": "additive_flat",
+        "value": 15,
+        "applies_to": "composite"
+      },
+      "cap": 100
+    },
+    "thresholds": {
+      "soap": {
+        "min": 0,
+        "max": 10,
+        "label": "SOAP - Safe & Optimum Autonomous Performance"
+      },
+      "moderate": {
+        "min": 11,
+        "max": 30,
+        "label": "MODERATE - Constrained Execution"
+      },
+      "elevated": {
+        "min": 31,
+        "max": 50,
+        "label": "ELEVATED - Exception Likely"
+      },
+      "high": {
+        "min": 51,
+        "max": 75,
+        "label": "HIGH - Director Review Required"
+      },
+      "ohshat": {
+        "min": 76,
+        "max": 100,
+        "label": "OHSHAT - Operational Hell, Send Humans Act Today!"
+      }
+    }
+  }
+}

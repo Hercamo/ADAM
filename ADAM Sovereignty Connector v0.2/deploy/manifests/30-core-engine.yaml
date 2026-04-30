@@ -1,0 +1,45 @@
+# CORE Engine — the decision router + intent-object processor.
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: core-engine-config, namespace: adam-core }
+data:
+  config.yaml: |
+    engine:
+      intent_ttl_seconds: 300
+      flight_recorder: http://flight-recorder.adam-observability.svc.cluster.local:8080
+      directors: http://directors.adam-constitution.svc.cluster.local
+      boss_score: http://boss-score.adam-core.svc.cluster.local:8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-engine
+  namespace: adam-core
+  labels: { adam.component: core-engine }
+spec:
+  replicas: 2
+  selector: { matchLabels: { adam.component: core-engine } }
+  template:
+    metadata:
+      labels: { adam.component: core-engine }
+    spec:
+      serviceAccountName: adam-core
+      containers:
+        - name: core-engine
+          image: adam/core-engine:0.1
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          livenessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 10 }
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { cpu: 1, memory: 512Mi } }
+          volumeMounts: [{ name: cfg, mountPath: /etc/adam }]
+      volumes:
+        - name: cfg
+          configMap: { name: core-engine-config }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: core-engine, namespace: adam-core }
+spec:
+  selector: { adam.component: core-engine }
+  ports: [{ port: 8080, targetPort: 8080 }]

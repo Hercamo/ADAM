@@ -1,0 +1,38 @@
+{{- range $director := .Values.constitution.directors }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-{{ $director }}
+  namespace: adam-constitution
+  labels:
+    adam.component: director
+    adam.director: {{ $director }}
+    {{- include "adam.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { adam.component: director, adam.director: {{ $director }} }
+  template:
+    metadata:
+      labels:
+        adam.component: director
+        adam.director: {{ $director }}
+    spec:
+      containers:
+        - name: director
+          image: {{ $.Values.constitution.image }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          env:
+            - { name: DIRECTOR_ROLE, value: "{{ $director }}" }
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          resources:
+            {{- toYaml $.Values.constitution.resources | nindent 12 }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata: { name: directors, namespace: adam-constitution }
+spec:
+  selector: { adam.component: director }
+  ports: [{ port: 80, targetPort: 8080 }]

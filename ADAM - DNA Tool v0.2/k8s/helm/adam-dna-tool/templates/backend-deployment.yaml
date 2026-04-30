@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "adam-dna-tool.fullname" . }}-backend
+  labels:
+    app.kubernetes.io/name: {{ include "adam-dna-tool.name" . }}
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "adam-dna-tool.name" . }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "adam-dna-tool.name" . }}
+        app.kubernetes.io/component: backend
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "adam-dna-tool.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: backend
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: AI_PROVIDER
+              value: {{ .Values.backend.env.AI_PROVIDER | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.backend.env.LOG_LEVEL | quote }}
+            - name: DEBUG
+              value: {{ .Values.backend.env.DEBUG | quote }}
+            - name: MAX_UPLOAD_SIZE_MB
+              value: {{ .Values.backend.env.MAX_UPLOAD_SIZE_MB | quote }}
+            - name: SESSION_TTL_HOURS
+              value: {{ .Values.backend.env.SESSION_TTL_HOURS | quote }}
+            - name: UPLOAD_DIR
+              value: /data/uploads
+            - name: OUTPUT_DIR
+              value: /data/output
+            - name: ADAM_DOCS_PATH
+              value: {{ .Values.backend.adamDocsVolume.mountPath }}
+            - name: DNA_TOOL_PATH
+              value: {{ .Values.backend.dnaToolVolume.mountPath }}
+            # API keys from secret
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: AZURE_OPENAI_API_KEY
+                  optional: true
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: AZURE_OPENAI_ENDPOINT
+                  optional: true
+            - name: AZURE_OPENAI_DEPLOYMENT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: AZURE_OPENAI_DEPLOYMENT
+                  optional: true
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.secretRef }}
+                  key: SECRET_KEY
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.uploads.enabled }}
+            - name: uploads
+              mountPath: /data/uploads
+            {{- end }}
+            {{- if .Values.persistence.output.enabled }}
+            - name: output
+              mountPath: /data/output
+            {{- end }}
+            {{- if .Values.backend.adamDocsVolume.enabled }}
+            - name: adam-docs
+              mountPath: {{ .Values.backend.adamDocsVolume.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.backend.dnaToolVolume.enabled }}
+            - name: dna-tool
+              mountPath: {{ .Values.backend.dnaToolVolume.mountPath }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.uploads.enabled }}
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "adam-dna-tool.fullname" . }}-uploads
+        {{- end }}
+        {{- if .Values.persistence.output.enabled }}
+        - name: output
+          persistentVolumeClaim:
+            claimName: {{ include "adam-dna-tool.fullname" . }}-output
+        {{- end }}
+        {{- if .Values.backend.adamDocsVolume.enabled }}
+        - name: adam-docs
+          configMap:
+            name: {{ include "adam-dna-tool.fullname" . }}-adam-docs
+            optional: true
+        {{- end }}
+        {{- if .Values.backend.dnaToolVolume.enabled }}
+        - name: dna-tool
+          configMap:
+            name: {{ include "adam-dna-tool.fullname" . }}-dna-tool
+            optional: true
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,225 @@
+# ADAM Sovereignty Connector — Command Catalog
+#
+# This file is the only set of actions Claude (or another model) can invoke
+# through the MCP / HTTP control plane. New capabilities must be added here
+# explicitly, with a risk tier and an argument schema. Catalog edits are a
+# deliberate security decision.
+#
+# risk tiers:
+#   read        — inspect only, no state change
+#   low         — writes inside the cluster, easily undone
+#   high        — installs or modifies the host
+#   privileged  — destructive or requires elevation; gated behind approval
+#
+# requires_approval=true means the HTTP /api/exec call must include
+# {"_approved": true} set by a human operator.
+
+version: 1
+commands:
+
+  # -------- host inspection ---------------------------------------------
+  - name: check_host
+    summary: "Gather Windows/host info, disk free, admin status, media presence."
+    risk: read
+    tags: [preflight, host]
+
+  # -------- corpus access -----------------------------------------------
+  - name: list_book_documents
+    summary: "List the ADAM Book corpus documents available to the AI."
+    risk: read
+    args_schema:
+      type: object
+      properties:
+        corpus_dir: { type: string, description: "Override default corpus dir" }
+    tags: [corpus]
+
+  - name: read_book_document
+    summary: "Read a single ADAM Book document (supports .md/.txt/.docx/.pdf/.pptx)."
+    risk: read
+    args_schema:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string, description: "Path relative to the corpus root" }
+        max_chars: { type: integer, description: "Truncate content above this length", minimum: 1000 }
+        corpus_dir: { type: string }
+    tags: [corpus]
+
+  # -------- host install (high risk; requires approval) -----------------
+  - name: install_docker_desktop
+    summary: "Install Docker Desktop on Windows 11 from the offline media folder."
+    risk: privileged
+    requires_approval: true
+    args_schema:
+      type: object
+      properties:
+        force: { type: boolean, description: "Re-install even if docker is on PATH" }
+    tags: [host, install, docker]
+
+  - name: install_kubectl
+    summary: "Copy kubectl to a PATH directory."
+    risk: high
+    args_schema:
+      type: object
+      properties:
+        force: { type: boolean }
+    tags: [host, install, k8s]
+
+  - name: install_helm
+    summary: "Copy Helm to a PATH directory."
+    risk: high
+    args_schema:
+      type: object
+      properties:
+        force: { type: boolean }
+    tags: [host, install, k8s]
+
+  - name: install_k3d
+    summary: "Copy the k3d CLI to a PATH directory."
+    risk: high
+    args_schema:
+      type: object
+      properties:
+        force: { type: boolean }
+    tags: [host, install, k8s]
+
+  # -------- cluster lifecycle -------------------------------------------
+  - name: bootstrap_cluster
+    summary: "Create the k3d cluster defined in config (servers/agents/ports)."
+    risk: high
+    tags: [cluster, bootstrap]
+
+  - name: destroy_cluster
+    summary: "Delete the k3d cluster. Keeps offline media and config."
+    risk: privileged
+    requires_approval: true
+    tags: [cluster, destructive]
+
+  - name: import_offline_images
+    summary: "Side-load every .tar image under ADAM_Offline_Media/images into the cluster."
+    risk: low
+    tags: [cluster, air-gap]
+
+  - name: cluster_status
+    summary: "Summarise nodes, pods, and recent events across all namespaces."
+    risk: read
+    tags: [cluster, read]
+
+  - name: list_namespaces
+    summary: "List all namespaces as JSON."
+    risk: read
+    tags: [cluster, read]
+
+  - name: list_workloads
+    summary: "List deploys/statefulsets/daemonsets/services (optionally scoped to one namespace)."
+    risk: read
+    args_schema:
+      type: object
+      properties:
+        namespace: { type: string }
+    tags: [cluster, read]
+
+  - name: describe_workload
+    summary: "kubectl describe on a single workload."
+    risk: read
+    args_schema:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        namespace: { type: string }
+        kind: { type: string, description: "deployment | statefulset | pod | service" }
+    tags: [cluster, read]
+
+  - name: get_logs
+    summary: "Tail logs for a pod or workload."
+    risk: read
+    args_schema:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        namespace: { type: string }
+        tail: { type: integer, description: "lines to tail", minimum: 1, maximum: 10000 }
+    tags: [cluster, read]
+
+  # -------- ADAM stack deploy -------------------------------------------
+  - name: deploy_namespaces
+    summary: "Apply namespaces/00-namespaces.yaml."
+    risk: low
+    tags: [adam, deploy]
+
+  - name: deploy_security_policies
+    summary: "Apply RBAC + NetworkPolicies (10-security-policies.yaml)."
+    risk: low
+    tags: [adam, deploy, security]
+
+  - name: deploy_constitution
+    summary: "Deploy the 5-Director constitution services."
+    risk: low
+    tags: [adam, deploy, constitution]
+
+  - name: deploy_core_engine
+    summary: "Deploy the CORE Engine (intent-object router)."
+    risk: low
+    tags: [adam, deploy, core]
+
+  - name: deploy_boss_score
+    summary: "Deploy the BOSS Score v3.2 scorer (canonical 7 dimensions, weight-sum 24.0)."
+    risk: low
+    tags: [adam, deploy, boss]
+
+  - name: deploy_flight_recorder
+    summary: "Deploy Flight Recorder + its PVC."
+    risk: low
+    tags: [adam, deploy, observability]
+
+  - name: deploy_agent_mesh
+    summary: "Deploy the 81+ agent mesh StatefulSet (reference count 81 across 7 canonical classes)."
+    risk: low
+    tags: [adam, deploy, agents]
+
+  - name: deploy_all
+    summary: "Deploy every ADAM layer in doctrinal order."
+    risk: low
+    tags: [adam, deploy]
+
+  # -------- DNA profiles (company-specific overlays) --------------------
+  - name: list_dna_profiles
+    summary: "List discoverable DNA profiles (scans corpus_dir + %APPDATA%/dna-profiles)."
+    risk: read
+    args_schema:
+      type: object
+      properties:
+        corpus_dir: { type: string, description: "Override config corpus_dir" }
+    tags: [dna, corpus]
+
+  - name: load_dna_profile
+    summary: "Load a DNA profile and return its normalised summary (mission, directors, BOSS dims, delegation)."
+    risk: read
+    args_schema:
+      type: object
+      properties:
+        name_or_path: { type: string, description: "Profile slug, company name, or directory path. Defaults to NetStreamX if present." }
+        corpus_dir: { type: string }
+    tags: [dna]
+
+  - name: apply_dna_profile
+    summary: "Write a Helm values overlay (profile-values.yaml) from a DNA profile + optional test-scale overrides. Used by deploy_all."
+    risk: low
+    args_schema:
+      type: object
+      properties:
+        name_or_path: { type: string, description: "Profile slug, name, or path. Defaults to NetStreamX." }
+        scale:
+          type: string
+          enum: [minimal, showcase, production-like]
+          description: "Built-in scale preset. 'minimal' = 100 assets / 100 subscribers / 9 agents for laptop tests."
+        assets: { type: integer, minimum: 1, description: "Override: synthetic asset count for test context" }
+        subscribers: { type: integer, minimum: 1, description: "Override: synthetic subscriber count for test context" }
+        agent_mesh_replicas: { type: integer, minimum: 1, maximum: 243, description: "Override: number of agent pods (doctrine reference = 81; DNA may add/withdraw, hence 81+)" }
+        core_engine_replicas: { type: integer, minimum: 1, maximum: 10 }
+        boss_score_replicas: { type: integer, minimum: 1, maximum: 10 }
+        flight_recorder_storage_gi: { type: integer, minimum: 1, maximum: 1024 }
+        corpus_dir: { type: string }
+    tags: [dna, deploy]

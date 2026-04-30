@@ -1,0 +1,139 @@
+# 5-Director Constitution (ADAM v1.4 canonical roster).
+#
+# Each Director is a small FastAPI service that exposes /decide for doctrine
+# arbitration and /health for probes. The image placeholder 'adam/director:0.1'
+# is provided as a tar in the offline media folder; build your real Director
+# logic atop the same image contract.
+#
+# Canonical roster (per ADAM book v1.4):
+#   - ceo             : Chief Executive Officer (ultimate accountable)
+#   - cfo             : Chief Financial Officer
+#   - legal_director  : Legal & Compliance Director
+#   - market_director : Market & Ecosystem Director
+#   - ciso            : Chief Information Security Officer
+# Optional add-ons documented in v1.4: cpo (Chief Privacy Officer) and
+# cto (Chief Technology Officer) — not deployed by default; enable via
+# values.yaml in the umbrella chart if the DNA requires it.
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: adam-constitution-config, namespace: adam-constitution }
+data:
+  directors.json: |
+    ["ceo", "cfo", "legal_director", "market_director", "ciso"]
+---
+# Each Director is a copy of the same Deployment shape; the DIRECTOR_ROLE env
+# var selects which doctrine role the pod serves.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-ceo
+  namespace: adam-constitution
+  labels: { adam.component: director, adam.director: ceo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: director, adam.director: ceo } }
+  template:
+    metadata:
+      labels: { adam.component: director, adam.director: ceo }
+    spec:
+      serviceAccountName: adam-constitution
+      containers:
+        - name: director
+          image: adam/director:0.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: DIRECTOR_ROLE, value: "ceo" }
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          resources: { requests: { cpu: 50m, memory: 64Mi }, limits: { cpu: 250m, memory: 256Mi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-cfo
+  namespace: adam-constitution
+  labels: { adam.component: director, adam.director: cfo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: director, adam.director: cfo } }
+  template:
+    metadata:
+      labels: { adam.component: director, adam.director: cfo }
+    spec:
+      serviceAccountName: adam-constitution
+      containers:
+        - name: director
+          image: adam/director:0.1
+          env: [{ name: DIRECTOR_ROLE, value: "cfo" }]
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-legal
+  namespace: adam-constitution
+  labels: { adam.component: director, adam.director: legal_director }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: director, adam.director: legal_director } }
+  template:
+    metadata:
+      labels: { adam.component: director, adam.director: legal_director }
+    spec:
+      serviceAccountName: adam-constitution
+      containers:
+        - name: director
+          image: adam/director:0.1
+          env: [{ name: DIRECTOR_ROLE, value: "legal_director" }]
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-market
+  namespace: adam-constitution
+  labels: { adam.component: director, adam.director: market_director }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: director, adam.director: market_director } }
+  template:
+    metadata:
+      labels: { adam.component: director, adam.director: market_director }
+    spec:
+      serviceAccountName: adam-constitution
+      containers:
+        - name: director
+          image: adam/director:0.1
+          env: [{ name: DIRECTOR_ROLE, value: "market_director" }]
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: director-ciso
+  namespace: adam-constitution
+  labels: { adam.component: director, adam.director: ciso }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: director, adam.director: ciso } }
+  template:
+    metadata:
+      labels: { adam.component: director, adam.director: ciso }
+    spec:
+      serviceAccountName: adam-constitution
+      containers:
+        - name: director
+          image: adam/director:0.1
+          env: [{ name: DIRECTOR_ROLE, value: "ciso" }]
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: directors, namespace: adam-constitution }
+spec:
+  selector: { adam.component: director }
+  ports: [{ port: 80, targetPort: 8080 }]

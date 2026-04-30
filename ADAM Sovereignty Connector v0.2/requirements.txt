@@ -1,0 +1,24 @@
+# ADAM Sovereignty Connector — pinned runtime dependencies
+#
+# Kept deliberately small so the frozen .exe stays under ~30 MB. Optional
+# extras (anthropic, openai, python-docx, pypdf, python-pptx) are pulled in
+# only when the corresponding backend or feature is actually used.
+#
+# All versions pinned with == for reproducible PyInstaller builds. When
+# upgrading, update here AND rebuild the .exe. Versions match ADAM DNA Tool
+# v1.1/backend for cross-module consistency.
+
+# core — always required
+PyYAML==6.0.2
+
+# AI backends — pinned
+anthropic==0.40.0
+openai==1.58.1
+
+# corpus readers — soft deps, imported lazily
+python-docx==1.1.2
+pypdf==5.1.0
+python-pptx==1.0.2
+
+# dev/build only (not bundled in the runtime .exe but handy to pin)
+# pyinstaller==6.11.1   (installed separately by build.bat)

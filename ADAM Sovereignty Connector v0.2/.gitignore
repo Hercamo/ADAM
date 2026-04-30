@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Build artefacts
+build_work/
+dist/
+*.spec.bak
+
+# Offline media (large, should live next to the .exe, not in git)
+ADAM_Offline_Media/
+scripts/placeholder_images/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local config with secrets
+config.local.yaml
+.env

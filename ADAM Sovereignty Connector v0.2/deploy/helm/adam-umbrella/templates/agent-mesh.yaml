@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata: { name: agents, namespace: adam-agents }
+spec:
+  clusterIP: None
+  selector: { adam.component: agent }
+  ports: [{ port: 8080, name: http }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: agent
+  namespace: adam-agents
+  labels:
+    adam.component: agent
+    {{- include "adam.labels" $ | nindent 4 }}
+spec:
+  serviceName: agents
+  replicas: {{ .Values.agentMesh.replicas }}
+  podManagementPolicy: Parallel
+  selector: { matchLabels: { adam.component: agent } }
+  template:
+    metadata:
+      labels: { adam.component: agent }
+    spec:
+      containers:
+        - name: agent
+          image: {{ .Values.agentMesh.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: AGENT_ORDINAL
+              valueFrom:
+                fieldRef: { fieldPath: metadata.name }
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          resources:
+            {{- toYaml .Values.agentMesh.resources | nindent 12 }}

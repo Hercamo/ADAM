@@ -1,0 +1,331 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# ADAM AGT Light — Master Helm Values
+# ══════════════════════════════════════════════════════════════════════════════
+# Chart: agt-light-stack (parent chart deploying all 7 AGT packages + RGI adapter)
+# ADAM AGT Light Plugin v1.1 | April 2026 — aligned with ADAM book v1.4 (BOSS
+# v3.2 canonical 7 dimensions, weight-sum 24.0; 5-Director Constitution —
+# CEO, CFO, Legal Director, Market Director, CISO; 81+ Agent Mesh reference
+# count 81 across seven canonical classes)
+#
+# IMPORTANT: Replace all placeholder values (wrapped in <angle_brackets>) with
+# your organization's actual configuration before deployment.
+#
+# Deployment: helm upgrade --install agt-light ./helm/agt-light/agt-light-stack \
+#             -f agt-light-helm-values.yaml --namespace adam-agt --create-namespace
+# ══════════════════════════════════════════════════════════════════════════════
+
+global:
+  namespace: adam-agt
+  adamNamespace: adam-governance         # Namespace where ADAM core services run
+
+  # ADAM service endpoints
+  adamCoreGraphEndpoint: "<COSMOS_DB_GREMLIN_ENDPOINT>"    # e.g. wss://adam-core.gremlin.cosmos.azure.com:443/
+  adamCoreGraphDatabase: "adam-core-graph"
+  adamCoreGraphContainer: "core-graph"
+  adamBossEngineEndpoint: "http://adam-boss-engine.adam-governance:8080"
+  adamFlightRecorderEndpoint: "<FLIGHT_RECORDER_BLOB_ENDPOINT>"
+  adamConfidentialLedgerEndpoint: "<CONFIDENTIAL_LEDGER_ENDPOINT>"
+
+  # Key management
+  keyVaultUri: "<AZURE_KEY_VAULT_URI>"    # e.g. https://adam-kv.vault.azure.net/
+  managedHsmUri: "<AZURE_MANAGED_HSM_URI>"
+
+  # Container registry
+  imageRegistry: "<ACR_NAME>.azurecr.io"
+  imageTag: "1.1.0"
+
+  # ADAM doctrine alignment
+  adamBookVersion: "1.4"
+  bossFormulaVersion: "3.2"
+  bossWeightSum: 24.0
+
+  # Observability
+  otelCollectorEndpoint: "http://otel-collector.adam-monitoring:4318"
+  sentinelWorkspaceId: "<LOG_ANALYTICS_WORKSPACE_ID>"
+
+  # Identity
+  workloadIdentityClientId: "<ENTRA_WORKLOAD_IDENTITY_CLIENT_ID>"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT OS — Policy enforcement sidecar (<0.1ms p99)
+# RGI-01: Policy Enforcement
+# ──────────────────────────────────────────────────────────────────────────────
+agentOs:
+  enabled: true
+
+  image:
+    repository: "agt/agent-os"
+    tag: "1.1.0"
+
+  sidecarInjector:
+    enabled: true
+    # Inject Agent OS sidecar into all pods in namespaces with this label
+    namespaceSelector:
+      matchLabels:
+        agt-os-injection: "enabled"
+    # Resource budget for sidecar container (added to pod resource requests)
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+
+  # Policy evaluation configuration
+  policyFormat: rego                 # yaml | rego | cedar
+  latencyBudgetMs: 0.1               # p99 enforcement SLA target
+  policyConfigMapRef: "adam-agent-os-policies"
+  policyUpdateIntervalSeconds: 60    # How often to poll CORE Engine for policy updates
+
+  # Decision modes
+  defaultAction: deny                # deny | allow — fail-closed is ADAM default
+  auditMode: false                   # Set true to log-only without enforcement (testing only)
+
+  # BOSS integration: Agent OS forwards policy evaluation events to BOSS engine
+  bossIntegration:
+    enabled: true
+    eventTypes:
+      - policy_enforced
+      - capability_denied
+      - intent_deviation_detected
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT MESH — Cryptographic identity and inter-agent trust
+# RGI-02: Agent Identity
+# ──────────────────────────────────────────────────────────────────────────────
+agentMesh:
+  enabled: true
+
+  image:
+    repository: "agt/agent-mesh"
+    tag: "1.1.0"
+
+  # DID (Decentralised Identifier) configuration
+  didMethod: "did:azure"             # W3C DID method
+  didRegistryEndpoint: "https://agt-did-registry.adam-agt.svc:443"
+
+  # Ed25519 key material (stored in Azure Key Vault, never exported)
+  keyVaultKeyRef: "agt-mesh-ed25519-key"
+
+  # IATP (Inter-Agent Trust Protocol) configuration
+  iaTpEnabled: true
+  trustScoreRefreshInterval: "60s"
+  trustScoreTiers:
+    verified:      900               # Fully trusted, autonomous execution with SOAP BOSS
+    trusted:       700               # Standard autonomous execution threshold
+    standard:      500               # Constrained execution threshold
+    probationary:  300               # Governor review required
+    untrusted:     100               # Agent suspended
+
+  # Two-dimensional trust thresholds (intersects with BOSS Score tiers)
+  trustThresholds:
+    minAutonomousExecution: 700      # SOAP tier: requires trust >= 700
+    minConstrainedExecution: 500     # MODERATE tier: requires trust >= 500
+    governorReviewRequired: 300      # ELEVATED tier trigger
+    agentSuspended: 100              # Agent suspended from all execution
+
+  # Identity bootstrap
+  bootstrapJob:
+    enabled: true                    # Run on first deployment to provision DIDs for all 81 agents
+    sourceAgentClass: "all"          # all | governor | orchestration | work_group | etc.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT RUNTIME — Execution rings and saga orchestration
+# RGI-03: Execution Containment
+# ──────────────────────────────────────────────────────────────────────────────
+agentRuntime:
+  enabled: true
+
+  image:
+    repository: "agt/agent-runtime"
+    tag: "1.1.0"
+
+  # Admission controller enforces ring assignments
+  admissionController:
+    enabled: true
+    ringAssignmentConfigMapRef: "adam-agent-ring-assignments"
+
+  # Execution ring definitions (maps to ADAM authority levels)
+  rings:
+    ring0:
+      description: "Meta-Governance — doctrine write access"
+      adamAgentClasses: ["meta_governance"]
+      allowedCapabilities: ["doctrine_write", "policy_publish", "core_engine_admin"]
+    ring1:
+      description: "Governor Agents — domain enforcement authority"
+      adamAgentClasses: ["governor_agent"]
+      allowedCapabilities: ["exception_adjudicate", "intent_evaluate", "domain_governance"]
+    ring2:
+      description: "Orchestration, Interface, Digital Twin"
+      adamAgentClasses: ["orchestration", "human_interface", "digital_twin"]
+      allowedCapabilities: ["task_orchestrate", "tool_invoke", "read_doctrine"]
+    ring3:
+      description: "Corporate Work Groups + AI-Centric Division — task execution"
+      adamAgentClasses: ["work_group", "ai_centric_division"]
+      allowedCapabilities: ["tool_invoke_authorised_only", "read_doctrine_readonly"]
+
+  # Kill switch configuration (maps to OHSHAT tier)
+  killSwitch:
+    enabled: true
+    ohshatBossTier: 76               # BOSS score triggering kill switch evaluation
+    requireDirectorAuth: true        # Require Director confirmation before kill switch
+
+  # Saga compensation configuration
+  sagaCompensationTimeout: "5m"
+  sagaMaxRetries: 3
+  sagaBackoffSeconds: 10
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT SRE — SLOs, error budgets, circuit breakers, chaos engineering
+# RGI-04: Telemetry Emission (partial)
+# ──────────────────────────────────────────────────────────────────────────────
+agentSre:
+  enabled: true
+
+  image:
+    repository: "agt/agent-sre"
+    tag: "1.1.0"
+
+  sloConfigMapRef: "adam-agent-slos"
+
+  # Error budget configuration (maps to Stability & Drift Plane)
+  errorBudget:
+    windowDays: 30
+    exhaustionAction: "constrain_hpa"  # Constrain HPA scaling when budget exhausted
+
+  # Circuit breaker defaults (per agent class; override in sloConfigMapRef)
+  circuitBreaker:
+    failureThresholdPct: 50
+    windowSeconds: 60
+    openDurationSeconds: 30
+    halfOpenProbes: 3
+
+  # Chaos engineering (REQUIRES Director authorization before enabling)
+  chaosEngineering:
+    enabled: false                   # NEVER enable without Director authorization
+    scheduleConfigMapRef: "adam-chaos-schedule"
+    requireDirectorSignature: true   # Each chaos experiment signed by CISO
+
+  # Metrics export
+  metricsExportInterval: "15s"
+  prometheusEnabled: true
+  prometheusPort: 9090
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT COMPLIANCE — Automated regulatory classification
+# BOSS Regulatory Impact dimension input
+# ──────────────────────────────────────────────────────────────────────────────
+agentCompliance:
+  enabled: true
+
+  image:
+    repository: "agt/agent-compliance"
+    tag: "1.1.0"
+
+  # Regulatory frameworks to classify against
+  frameworks:
+    - eu_ai_act                      # Mandatory for EU deployments
+    - hipaa                          # Enable for healthcare verticals
+    - soc2                           # Enable for cloud service providers
+
+  # BOSS Score integration (feeds Regulatory Impact dimension)
+  bossFeedEnabled: true
+  bossFeedEndpoint: "http://adam-boss-engine.adam-governance:8080/ingest/regulatory-classification"
+  classificationCacheMinutes: 5      # Cache classification results to reduce latency
+
+  # Extended classification (optional — adds latency)
+  extendedFrameworks:
+    enabled: false
+    frameworks: []                   # dora | nis2 | iso42001 | nist — covered by ADAM architecture, not AGT
+
+  replicas: 2                        # Shared service (not sidecar), runs in Governance node pool
+  resources:
+    requests: { memory: "512Mi", cpu: "250m" }
+    limits:   { memory: "1Gi",   cpu: "500m" }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT MARKETPLACE — Plugin lifecycle governance
+# RGI-05: Tool and Plugin Governance
+# ──────────────────────────────────────────────────────────────────────────────
+agentMarketplace:
+  enabled: true
+
+  image:
+    repository: "agt/agent-marketplace"
+    tag: "1.1.0"
+
+  # Registry configuration
+  registryUrl: "https://agt-marketplace.adam-agt.svc:443"
+  requireSignedManifests: true
+  signingAlgorithm: "Ed25519"
+
+  # Trusted publisher keys (Ed25519 public keys for your organization's tool publishers)
+  # Add your organization's public keys here
+  trustedPublisherKeys: []           # POPULATE before enabling in production
+
+  # Revocation checks
+  revocationCheckInterval: "1h"
+  realTimeRevocationOnBossHigh: true # Real-time check when BOSS score >= 51
+
+  replicas: 2
+  resources:
+    requests: { memory: "256Mi", cpu: "100m" }
+    limits:   { memory: "512Mi", cpu: "250m" }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGENT LIGHTNING — RL training governance (OPTIONAL)
+# Stability & Drift Plane reinforcement for RL-enabled deployments
+# ──────────────────────────────────────────────────────────────────────────────
+agentLightning:
+  enabled: false                     # ONLY enable for deployments with RL-trained agents
+
+  image:
+    repository: "agt/agent-lightning"
+    tag: "1.1.0"
+
+  rlBoundaryPolicy: strict           # strict | moderate | permissive — ADAM recommends strict
+  trainingAuditEnabled: true         # Forward all RL training events to Flight Recorder
+  runawayOptimizationThreshold: 0.15 # Divergence percentage triggering training halt
+
+  resources:
+    requests: { memory: "2Gi",  cpu: "2" }
+    limits:   { memory: "4Gi",  cpu: "4" }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RGI ADAPTER — ADAM Flight Recorder RGI-04 bridge (ADAM-proprietary)
+# Bridges AGT OpenTelemetry telemetry to ADAM Flight Recorder evidence format
+# ──────────────────────────────────────────────────────────────────────────────
+rgiAdapter:
+  enabled: true
+
+  image:
+    repository: "<ACR_NAME>.azurecr.io/adam-rgi-adapter"
+    tag: "2.0.0"
+
+  replicas: 2
+
+  # Processing configuration
+  batchSize: 100                     # Events per Flight Recorder write batch
+  flushIntervalMs: 500               # Maximum delay before flushing incomplete batch
+
+  # Signing configuration (HSM-backed, key in Azure Managed HSM)
+  signingKeyRef: "adam-fr-signer"
+  ntpEndpoint: "time.windows.com"    # Independent NTP — NEVER use agent clock for timestamps
+
+  # Hash-chain configuration
+  hashAlgorithm: "SHA-256"
+  chainLinkingEnabled: true          # Link each event to previous event hash
+
+  # Event type mapping (AGT span names to ADAM Flight Recorder event types)
+  eventTypeMapping:
+    "agt.os.policy.evaluated": "agt_policy_evaluated"
+    "agt.mesh.identity.verified": "agt_identity_verified"
+    "agt.runtime.ring.enforced": "agt_ring_enforced"
+    "agt.mesh.trust.updated": "agt_trust_updated"
+    "agt.compliance.classified": "agt_compliance_classified"
+    "agt.marketplace.plugin.verified": "agt_plugin_verified"
+
+  resources:
+    requests: { memory: "512Mi", cpu: "250m" }
+    limits:   { memory: "1Gi",   cpu: "500m" }

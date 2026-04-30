@@ -1,0 +1,79 @@
+# BOSS Score service — the canonical 7-dimension autonomy scorer (ADAM v1.4, BOSS v3.2).
+#
+# Composite Score C = (Sum(S_d * W_d)) / 24.0
+#   where W_d follows the Priority Tier model:
+#     Top      = 5.0  -> security_impact
+#     Very High= 4.0  -> sovereignty_action, financial_exposure
+#     High     = 3.0  -> regulatory_impact, reputational_risk, rights_certainty
+#     Medium   = 2.0  -> doctrinal_alignment
+#
+# Critical Dimension Override: if max(S_d) > 75, C = max(C, max(S_d) - 10)
+# Non-Idempotent Penalty: +15 flat additive (not a multiplier)
+#
+# Tier routing (composite_score):
+#    0-10  SOAP      Safe & Optimum Autonomous Performance
+#   11-30  MODERATE  Agent-autonomous with light oversight
+#   31-50  ELEVATED  Work-group consensus required
+#   51-75  HIGH      Domain Governor + Director authorisation
+#   76-100 OHSHAT    Operational Hell, Send Humans Act Today! (full Directors' Council)
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: boss-score-config, namespace: adam-core }
+data:
+  dimensions.json: |
+    [
+      { "id": "security_impact",     "weight": 5.0, "tier": "top" },
+      { "id": "sovereignty_action",  "weight": 4.0, "tier": "very_high" },
+      { "id": "financial_exposure",  "weight": 4.0, "tier": "very_high" },
+      { "id": "regulatory_impact",   "weight": 3.0, "tier": "high" },
+      { "id": "reputational_risk",   "weight": 3.0, "tier": "high" },
+      { "id": "rights_certainty",    "weight": 3.0, "tier": "high" },
+      { "id": "doctrinal_alignment", "weight": 2.0, "tier": "medium" }
+    ]
+  weight_sum.txt: |
+    24.0
+  tiers.json: |
+    [
+      { "id": "SOAP",     "min": 0,  "max": 10,  "label": "Safe & Optimum Autonomous Performance" },
+      { "id": "MODERATE", "min": 11, "max": 30,  "label": "Agent-autonomous with light oversight" },
+      { "id": "ELEVATED", "min": 31, "max": 50,  "label": "Work-group consensus required" },
+      { "id": "HIGH",     "min": 51, "max": 75,  "label": "Domain Governor + Director authorisation" },
+      { "id": "OHSHAT",   "min": 76, "max": 100, "label": "Operational Hell, Send Humans Act Today!" }
+    ]
+  overrides.json: |
+    {
+      "critical_dimension_override": { "threshold": 75, "floor_offset": -10 },
+      "non_idempotent_penalty":      { "type": "additive_flat", "value": 15 }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boss-score
+  namespace: adam-core
+  labels: { adam.component: boss-score }
+spec:
+  replicas: 1
+  selector: { matchLabels: { adam.component: boss-score } }
+  template:
+    metadata:
+      labels: { adam.component: boss-score }
+    spec:
+      serviceAccountName: adam-core
+      containers:
+        - name: boss-score
+          image: adam/boss-score:0.1
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          resources: { requests: { cpu: 50m, memory: 96Mi }, limits: { cpu: 500m, memory: 256Mi } }
+          volumeMounts: [{ name: dims, mountPath: /etc/boss }]
+      volumes:
+        - name: dims
+          configMap: { name: boss-score-config }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: boss-score, namespace: adam-core }
+spec:
+  selector: { adam.component: boss-score }
+  ports: [{ port: 8080, targetPort: 8080 }]

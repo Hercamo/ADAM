@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: flight-recorder-data, namespace: adam-observability }
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ .Values.global.storageClass }}
+  resources: { requests: { storage: {{ .Values.flightRecorder.storageGi }}Gi } }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: flight-recorder
+  namespace: adam-observability
+  labels:
+    adam.component: flight-recorder
+    {{- include "adam.labels" $ | nindent 4 }}
+spec:
+  serviceName: flight-recorder
+  replicas: 1
+  selector: { matchLabels: { adam.component: flight-recorder } }
+  template:
+    metadata:
+      labels: { adam.component: flight-recorder }
+    spec:
+      containers:
+        - name: recorder
+          image: {{ .Values.flightRecorder.image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 5 }
+          volumeMounts: [{ name: data, mountPath: /var/lib/flightrec }]
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: flight-recorder-data }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: flight-recorder, namespace: adam-observability }
+spec:
+  selector: { adam.component: flight-recorder }
+  ports: [{ port: 8080, targetPort: 8080 }]

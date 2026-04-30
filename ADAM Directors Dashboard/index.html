@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADAM Directors Dashboard</title>
+<meta name="description" content="Director-facing control surface for the ADAM (Autonomous Decisioning & Adjudication Mesh) governance system.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- =========================================================
+       TOP BAR
+  ========================================================== -->
+  <header class="topbar" role="banner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">AD</div>
+      <div>
+        <div class="brand-title">ADAM · Directors Dashboard</div>
+        <div class="brand-sub">Autonomous Decisioning &amp; Adjudication Mesh</div>
+      </div>
+    </div>
+
+    <div class="topbar-meta" role="status" aria-live="polite">
+      <span class="meta-chip" id="mode-chip"><span class="dot blue"></span>Mode: <strong>Demo mode</strong></span>
+      <span class="meta-chip" id="company-chip">Company: <strong>—</strong></span>
+      <span class="meta-chip" id="adam-chip"><strong>ADAM —</strong></span>
+      <span class="meta-chip" id="doctrine-chip">Doctrine: <strong>—</strong></span>
+      <button class="btn" id="refresh-btn" title="Re-probe data source and refresh">↻ Refresh</button>
+      <button class="btn" id="export-btn"  title="Print / export the dashboard as a director briefing">⎙ Export</button>
+    </div>
+  </header>
+
+  <!-- Density / sizing controls -->
+  <div class="toolrow" role="toolbar" aria-label="Display controls">
+    <label>
+      Density
+      <input type="range" id="density" min="0.85" max="1.25" step="0.02" value="1" aria-label="Interface density">
+    </label>
+    <label>
+      Filter director
+      <select id="director-filter" class="select-dark" aria-label="Filter approval queue by director">
+        <option value="all">All directors</option>
+      </select>
+    </label>
+    <span style="color:var(--adam-text-mute); font-size:11px; margin-left:auto;">
+      Tip: drag the bottom-right corner of any panel to resize it. Below 1024px, panels stack vertically.
+    </span>
+  </div>
+
+  <!-- =========================================================
+       MAIN GRID (4 resizable quadrants)
+  ========================================================== -->
+  <main class="main" id="main-grid">
+
+    <!-- QUADRANT 1: Agent-Group status + director roster + routing -->
+    <section class="panel" aria-labelledby="pnl-mesh">
+      <div class="panel-hd">
+        <span class="dot green" aria-hidden="true"></span>
+        <span class="panel-title" id="pnl-mesh">Mesh Status</span>
+        <span class="panel-sub">81-agent health across 7 classes</span>
+        <span class="panel-spacer"></span>
+        <span class="panel-sub" id="mesh-totals"></span>
+      </div>
+      <div class="panel-bd">
+        <div class="legend" style="margin-bottom:8px;">
+          <span><i class="swatch" style="background:var(--tier-soap)"></i>Autonomous</span>
+          <span><i class="swatch" style="background:var(--tier-high)"></i>Escalation</span>
+          <span><i class="swatch" style="background:var(--tier-ohshat)"></i>Down</span>
+          <span style="margin-left:auto;color:var(--adam-text-mute)">hover any tile for detail</span>
+        </div>
+        <div id="group-grid" class="group-grid" aria-label="Agent mesh by class"></div>
+
+        <h4 style="margin:18px 0 6px; font-size:11px; color:var(--adam-text-dim); letter-spacing:1px; text-transform:uppercase;">Directors · Pending in queue</h4>
+        <div id="director-roster" class="directors-row"></div>
+
+        <h4 style="margin:18px 0 6px; font-size:11px; color:var(--adam-text-dim); letter-spacing:1px; text-transform:uppercase;">BOSS routing last 24h · <span id="routing-total" style="color:var(--adam-text); font-weight:600;"></span></h4>
+        <div id="routing" class="routing"></div>
+
+        <h4 style="margin:18px 0 6px; font-size:11px; color:var(--adam-text-dim); letter-spacing:1px; text-transform:uppercase;">Flight Recorder — last events</h4>
+        <div id="fr-tail" class="fr-tail" aria-label="Rolling Flight Recorder tail"></div>
+      </div>
+    </section>
+
+    <!-- QUADRANT 2: Exception queue (Exception Agent, the clickable action list) -->
+    <section class="panel" aria-labelledby="pnl-queue">
+      <div class="panel-hd">
+        <span class="dot amber" aria-hidden="true"></span>
+        <span class="panel-title" id="pnl-queue">Director Approval Queue</span>
+        <span class="panel-sub" id="queue-count">0 pending</span>
+        <span class="panel-spacer"></span>
+        <span class="panel-sub">Exception &amp; Escalation Orchestrator · orch-exception</span>
+      </div>
+      <div class="panel-bd">
+        <div class="panel-sub" style="margin-bottom:8px;">
+          Click any row for full BOSS dimension breakdown, alternatives, and Explain-Back narrative.
+          Approve / Modify / Reject writes a signed event to the Flight Recorder.
+        </div>
+        <div id="queue-list" class="queue-list" aria-label="Pending director exceptions"></div>
+      </div>
+    </section>
+
+    <!-- QUADRANT 3: Intent agent (conversational) -->
+    <section class="panel" aria-labelledby="pnl-intent">
+      <div class="panel-hd">
+        <span class="dot blue" aria-hidden="true"></span>
+        <span class="panel-title" id="pnl-intent">Intent Interpretation Agent</span>
+        <span class="panel-sub">hi-intent · plain-language in → Intent Object out</span>
+      </div>
+      <div class="panel-bd convo">
+        <div id="intent-log" class="convo-log" aria-live="polite">
+          <div class="bubble adam">
+            Hello, Director. Describe your intent in plain English (e.g., <i>"Approve a $3,200 paid-social campaign for Gaming Q3"</i>)
+            and I will turn it into a structured Intent Object, score it against BOSS v3.2, and either execute autonomously
+            (SOAP/MODERATE), route it to the appropriate Domain Governor (ELEVATED), or queue it for your approval (HIGH/OHSHAT).
+            <small>hi-intent · ready</small>
+          </div>
+        </div>
+        <div class="panel-sub" style="margin-top:6px">
+          Examples:
+          <button class="btn example-chip" data-target="intent-input" data-text="Approve a $3,200 paid-social campaign for Gaming Q3 refresh">$3,200 campaign</button>
+          <button class="btn example-chip" data-target="intent-input" data-text="Isolate compromised egress node after unusual outbound traffic">breach response</button>
+          <button class="btn example-chip" data-target="intent-input" data-text="Propose novel DORA interpretation for EU→US analytics pipeline">novel regulation</button>
+        </div>
+        <form id="intent-form" class="convo-form" autocomplete="off">
+          <input id="intent-input" type="text" placeholder="State your intent…" aria-label="Intent input">
+          <label class="meta-chip" style="cursor:pointer;user-select:none;">
+            <input type="checkbox" id="intent-nonidem" style="margin:0 5px 0 0;">irreversible
+          </label>
+          <button class="btn primary" type="submit">Submit</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- QUADRANT 4: Explain-Back agent (conversational) + Twin usage row -->
+    <section class="panel" aria-labelledby="pnl-explain">
+      <div class="panel-hd">
+        <span class="dot blue" aria-hidden="true"></span>
+        <span class="panel-title" id="pnl-explain">Explain-Back Agent</span>
+        <span class="panel-sub">hi-explain · narrative from Flight Recorder replay</span>
+      </div>
+      <div class="panel-bd convo">
+        <div id="explain-log" class="convo-log" aria-live="polite">
+          <div class="bubble adam">
+            Type the original intent (or something similar) and I'll find it in the audit trail —
+            BOSS scores, governor evaluations, twin simulations, exception emission, and director decisions —
+            and replay it as a plain-English narrative. If more than one intent matches, I'll show you a list
+            to pick from. An <code>intent_id</code> also works if you have one handy.
+            <small>hi-explain · ready · text search enabled</small>
+          </div>
+        </div>
+        <div class="panel-sub" style="margin-top:6px">
+          Try:
+          <button class="btn example-chip" data-target="explain-input" data-text="vendor payment streaming rights">vendor payment</button>
+          <button class="btn example-chip" data-target="explain-input" data-text="egress node breach">breach response</button>
+          <button class="btn example-chip" data-target="explain-input" data-text="DORA analytics pipeline">DORA ruling</button>
+          <button class="btn example-chip" data-target="explain-input" data-text="paid social campaign Gaming">campaign</button>
+          <button class="btn example-chip" data-target="explain-input" data-text="doctrine mutation amendment">doctrine change</button>
+        </div>
+        <form id="explain-form" class="convo-form" autocomplete="off">
+          <input id="explain-input" type="text" placeholder="Describe the intent in your own words…" aria-label="Explain input">
+          <button class="btn primary" type="submit">Find &amp; explain</button>
+        </form>
+
+        <!-- Digital Twin usage lives in the same quadrant so a director sees the simulation layer alongside the explanation layer -->
+        <h4 style="margin:18px 0 6px; font-size:11px; color:var(--adam-text-dim); letter-spacing:1px; text-transform:uppercase;">Digital Twin Usage · last 24h</h4>
+        <div id="twin-grid" class="twin-grid" aria-label="Digital Twin consultation telemetry"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <span>© NetStreamX sovereign test instance · ADAM Directors Dashboard v1.0</span>
+    <span style="margin-left:auto">
+      Data source:
+      <strong id="footer-mode">—</strong>
+      · Directors never touch workflows.
+    </span>
+  </footer>
+</div>
+
+<!-- =========================================================
+     EXCEPTION DETAIL MODAL
+========================================================== -->
+<div id="modal-root" class="modal-root" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+  <div class="modal">
+    <div class="modal-hd">
+      <h3 id="modal-title">Exception packet</h3>
+      <span class="panel-spacer"></span>
+      <button id="modal-close" class="btn" aria-label="Close">✕</button>
+    </div>
+    <div id="modal-body" class="modal-bd"></div>
+    <div class="modal-ft">
+      <button class="btn" id="modal-cancel" onclick="document.getElementById('modal-root').hidden = true">Cancel</button>
+      <button class="btn modify"  id="modal-modify"  data-intent="">Modify</button>
+      <button class="btn danger"  id="modal-reject"  data-intent="">Reject</button>
+      <button class="btn approve" id="modal-approve" data-intent="">Approve &amp; Sign</button>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+
+<script src="data/demo-data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  // Mirror the data-source mode into the footer once ready.
+  const obs = new MutationObserver(() => {
+    const el = document.getElementById("mode-chip");
+    const s  = el?.querySelector("strong")?.textContent || "—";
+    const f  = document.getElementById("footer-mode");
+    if (f) f.textContent = s;
+  });
+  obs.observe(document.getElementById("mode-chip"), { childList: true, subtree: true, characterData: true });
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+# Default values for the ADAM umbrella chart (ADAM v1.4 alignment).
+#
+# DEFAULT: full ADAM doctrine (81+ agent mesh, reference count 81). This matches
+# the seven-class mesh described in the ADAM book v1.4 and the SpecPack. A
+# 32 GB / 8-core host will run it but be tight; 64 GB / 16-core is the
+# comfortable recommendation. On an under-spec host the Connector will emit a
+# pre-flight WARNING but will continue the install — the operator is always
+# trusted to proceed.
+#
+# To run a scaled-down showcase (laptop / demo machine), override with:
+#   helm upgrade adam deploy/helm/adam-umbrella --set agentMesh.replicas=9
+#
+# Or use the Connector's CLI: `dna apply --scale minimal` (100/100/9).
+
+global:
+  imageRegistry: ""     # empty = use the offline-imported images
+  imagePullPolicy: IfNotPresent
+  storageClass: "local-path"
+  adamVersion: "1.4"
+  bossFormulasVersion: "3.2"
+  dnaQuestionnaireVersion: "1.0"
+
+# 5-Director Constitution (ADAM v1.4 canonical roster).
+# Optional add-ons: cpo (Chief Privacy Officer), cto (Chief Technology Officer).
+constitution:
+  directors:
+    - ceo
+    - cfo
+    - legal_director
+    - market_director
+    - ciso
+  # Enable optional directors by uncommenting:
+  # optional_directors: ["cpo", "cto"]
+  image: adam/director:0.1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 250m, memory: 256Mi }
+
+coreEngine:
+  replicas: 2
+  image: adam/core-engine:0.1
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 1, memory: 512Mi }
+
+# BOSS Score v3.2 — canonical 7-dimension, weight_sum = 24.0.
+bossScore:
+  replicas: 1
+  image: adam/boss-score:0.1
+  version: "3.2"
+  weightSum: 24.0
+  # Composite C = sum(S_d * W_d) / 24.0
+  dimensions:
+    - { id: security_impact,     weight: 5.0, tier: top }
+    - { id: sovereignty_action,  weight: 4.0, tier: very_high }
+    - { id: financial_exposure,  weight: 4.0, tier: very_high }
+    - { id: regulatory_impact,   weight: 3.0, tier: high }
+    - { id: reputational_risk,   weight: 3.0, tier: high }
+    - { id: rights_certainty,    weight: 3.0, tier: high }
+    - { id: doctrinal_alignment, weight: 2.0, tier: medium }
+  priorityTiers:
+    top: 5.0
+    very_high: 4.0
+    high: 3.0
+    medium: 2.0
+  tiers:
+    - { id: SOAP,     min: 0,  max: 10,  label: "Safe & Optimum Autonomous Performance" }
+    - { id: MODERATE, min: 11, max: 30,  label: "Agent-autonomous with light oversight" }
+    - { id: ELEVATED, min: 31, max: 50,  label: "Work-group consensus required" }
+    - { id: HIGH,     min: 51, max: 75,  label: "Domain Governor + Director authorisation" }
+    - { id: OHSHAT,   min: 76, max: 100, label: "Operational Hell, Send Humans Act Today!" }
+  criticalDimensionOverride:
+    threshold: 75
+    floorOffset: -10
+  nonIdempotentPenalty:
+    type: additive_flat
+    value: 15
+
+flightRecorder:
+  image: adam/flight-recorder:0.1
+  storageGi: 5
+
+# Canonical doctrine: 81+ agent mesh (reference count 81 across 7 classes).
+# Override with --set agentMesh.replicas=9 for a 3 x 3 laptop showcase.
+agentMesh:
+  image: adam/agent:0.1
+  replicas: 81
+  referenceCount: 81
+  notation: "81+"
+  classes:
+    domain_governors: 5
+    orchestration_agents: 4
+    human_interface_agents: 3
+    corporate_work_groups: 39
+    ai_centric_division: 23
+    digital_twin_agents: 4
+    meta_governance_agents: 3
+  resources:
+    requests: { cpu: 25m, memory: 48Mi }
+    limits:   { cpu: 200m, memory: 192Mi }

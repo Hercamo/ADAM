@@ -1,0 +1,274 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://adam-framework.org/schemas/agt-light-rgi/v1.1",
+  "title": "ADAM Runtime Governance Interface (RGI) Compliance Schema",
+  "description": "Machine-readable definition of the five RGI domains any runtime enforcement framework must satisfy to be ADAM-compatible. AGT satisfies all five domains natively. Alternative frameworks must document their RGI compliance against this schema. v1.1 aligned with ADAM book v1.4 (BOSS v3.2 canonical; 81+ Agent Mesh reference count 81 across seven canonical classes).",
+  "version": "1.1",
+  "adam_sovereign_boundary": "This schema defines the interface. ADAM's CORE Engine, BOSS Score v3.2 (canonical 7 dimensions, weight-sum 24.0), Exception Economy, 5-Director Constitution (CEO, CFO, Legal Director, Market Director, CISO), and 81+ Agent Mesh topology (reference count 81 across seven canonical classes) are outside this interface and remain sovereign regardless of runtime implementation.",
+
+  "type": "object",
+  "required": ["implementation_name", "implementation_version", "rgi_domains", "owasp_coverage"],
+
+  "properties": {
+    "implementation_name": {
+      "type": "string",
+      "description": "Name of the runtime governance implementation",
+      "examples": ["Agent Governance Toolkit (AGT)", "OPA-only", "SPIFFE/SPIRE + OPA", "Custom"]
+    },
+    "implementation_version": {
+      "type": "string",
+      "description": "Version of the runtime implementation"
+    },
+    "implementation_license": {
+      "type": "string",
+      "description": "Software license of the runtime implementation",
+      "examples": ["MIT", "Apache-2.0", "Proprietary"]
+    },
+    "languages_supported": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Programming languages supported by the runtime implementation",
+      "examples": [["Python", "TypeScript", "Rust", "Go", ".NET"]]
+    },
+    "agt_packages_used": {
+      "type": "array",
+      "description": "[AGT Light only] AGT packages included in this deployment",
+      "items": {
+        "type": "string",
+        "enum": ["agent-os", "agent-mesh", "agent-runtime", "agent-sre", "agent-compliance", "agent-marketplace", "agent-lightning"]
+      }
+    },
+
+    "rgi_domains": {
+      "type": "object",
+      "required": ["RGI-01", "RGI-02", "RGI-03", "RGI-04", "RGI-05"],
+      "properties": {
+
+        "RGI-01": {
+          "type": "object",
+          "title": "Policy Enforcement",
+          "description": "Intercept every agent action at invocation boundary; evaluate against active policies; permit, deny, or escalate",
+          "required": ["status", "implementation_component", "latency_p99_ms"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["fully_satisfied", "partially_satisfied", "not_satisfied"],
+              "description": "Compliance status for this RGI domain"
+            },
+            "implementation_component": {
+              "type": "string",
+              "description": "What component satisfies this domain",
+              "examples": ["AGT Agent OS", "OPA Gatekeeper sidecar", "Custom FastAPI middleware"]
+            },
+            "latency_p99_ms": {
+              "type": "number",
+              "description": "Measured p99 policy evaluation latency in milliseconds. AGT target: <0.1ms",
+              "examples": [0.08, 2.5, 10.0]
+            },
+            "policy_formats_supported": {
+              "type": "array",
+              "items": { "type": "string" },
+              "examples": [["rego", "yaml", "cedar"]]
+            },
+            "evaluation_boundary": {
+              "type": "string",
+              "enum": ["invocation_boundary", "scheduling_boundary", "api_gateway", "other"],
+              "description": "Where policy evaluation occurs in the execution flow"
+            },
+            "risk_acceptance_notes": {
+              "type": "string",
+              "description": "Required if status is partially_satisfied. Document gaps and compensating controls."
+            }
+          }
+        },
+
+        "RGI-02": {
+          "type": "object",
+          "title": "Agent Identity",
+          "description": "Issue and verify non-forgeable cryptographic identity for every agent; support mTLS; revoke compromised identities",
+          "required": ["status", "implementation_component", "identity_scheme"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["fully_satisfied", "partially_satisfied", "not_satisfied"]
+            },
+            "implementation_component": {
+              "type": "string",
+              "examples": ["AGT Agent Mesh (DIDs + Ed25519)", "SPIFFE/SPIRE", "Istio mTLS SVIDs", "Custom PKI"]
+            },
+            "identity_scheme": {
+              "type": "string",
+              "enum": ["did_w3c", "spiffe_svid", "x509_pki", "jwt_based", "other"]
+            },
+            "cryptographic_algorithm": {
+              "type": "string",
+              "examples": ["Ed25519", "RSA-2048", "ECDSA-P256"]
+            },
+            "trust_scoring_supported": {
+              "type": "boolean",
+              "description": "Whether a continuous 0-1000 scale trust score per agent is available. AGT Agent Mesh provides this; most alternatives do not.",
+              "default": false
+            },
+            "trust_score_scale": {
+              "type": "object",
+              "description": "If trust scoring is supported, document the scale",
+              "properties": {
+                "min": { "type": "number" },
+                "max": { "type": "number" },
+                "adam_autonomous_threshold": { "type": "number", "description": "Score required for SOAP-tier autonomous execution" }
+              }
+            },
+            "revocation_mechanism": {
+              "type": "string",
+              "examples": ["DID revocation registry", "Certificate revocation list (CRL)", "SPIRE entry deletion", "Manual"]
+            }
+          }
+        },
+
+        "RGI-03": {
+          "type": "object",
+          "title": "Execution Containment",
+          "description": "Enforce privilege boundaries on agent execution; prevent lateral movement; support emergency shutdown",
+          "required": ["status", "implementation_component"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["fully_satisfied", "partially_satisfied", "not_satisfied"]
+            },
+            "implementation_component": {
+              "type": "string",
+              "examples": ["AGT Agent Runtime (execution rings + kill switch)", "Kubernetes RBAC + PodSecurityAdmission", "OPA Gatekeeper + capability restriction"]
+            },
+            "privilege_model": {
+              "type": "string",
+              "enum": ["execution_rings_4", "rbac_binary", "custom_tiers", "none"]
+            },
+            "ring_to_adam_class_mapping": {
+              "type": "object",
+              "description": "[AGT Light] Maps AGT execution rings to ADAM agent classes",
+              "properties": {
+                "ring_0": { "type": "string", "default": "meta_governance" },
+                "ring_1": { "type": "string", "default": "governor_agent" },
+                "ring_2": { "type": "string", "default": "orchestration_interface_digital_twin" },
+                "ring_3": { "type": "string", "default": "work_group" }
+              }
+            },
+            "emergency_shutdown_supported": {
+              "type": "boolean",
+              "description": "Whether emergency kill switch / OHSHAT shutdown is architecturally enforced"
+            },
+            "saga_compensation_supported": {
+              "type": "boolean",
+              "description": "Whether compensating transaction patterns for rollback are supported"
+            }
+          }
+        },
+
+        "RGI-04": {
+          "type": "object",
+          "title": "Telemetry Emission",
+          "description": "Emit structured audit events to Flight Recorder for every action evaluation; include BOSS Score inputs; OpenTelemetry-compatible",
+          "required": ["status", "implementation_component", "otel_compatible"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["fully_satisfied", "partially_satisfied", "not_satisfied"]
+            },
+            "implementation_component": {
+              "type": "string",
+              "examples": ["AGT Agent SRE + Agent OS telemetry + ADAM RGI-04 adapter", "OpenTelemetry SDK direct", "Custom event bus adapter"]
+            },
+            "otel_compatible": {
+              "type": "boolean",
+              "description": "Whether telemetry output is OpenTelemetry W3C trace context compatible"
+            },
+            "flight_recorder_adapter_required": {
+              "type": "boolean",
+              "description": "Whether an ADAM-provided adapter is required to bridge telemetry to Flight Recorder format",
+              "default": true
+            },
+            "boss_score_inputs_available": {
+              "type": "boolean",
+              "description": "Whether telemetry includes signals usable as BOSS Score dimension inputs (particularly Security Impact and Regulatory Impact)"
+            },
+            "slo_monitoring_supported": {
+              "type": "boolean",
+              "description": "Whether quantitative SLOs, error budgets, and circuit breakers for agent meshes are supported"
+            }
+          }
+        },
+
+        "RGI-05": {
+          "type": "object",
+          "title": "Tool and Plugin Governance",
+          "description": "Verify integrity of external tools and plugins before agent invocation; maintain signed manifest registry; support revocation",
+          "required": ["status", "implementation_component"],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["fully_satisfied", "partially_satisfied", "not_satisfied"]
+            },
+            "implementation_component": {
+              "type": "string",
+              "examples": ["AGT Agent Marketplace (Ed25519 signing + attestation)", "Sigstore/cosign", "Custom manifest registry", "In-house attestation service"]
+            },
+            "signing_algorithm": {
+              "type": "string",
+              "examples": ["Ed25519", "ECDSA-P256", "RSA-2048"]
+            },
+            "revocation_registry_supported": {
+              "type": "boolean",
+              "description": "Whether a revocation registry for compromised plugins/tools is maintained"
+            },
+            "mcp_v2_compatible": {
+              "type": "boolean",
+              "description": "Whether tool governance integrates with MCP v2 (Model Context Protocol) tool invocation contracts"
+            }
+          }
+        }
+      }
+    },
+
+    "owasp_coverage": {
+      "type": "object",
+      "title": "OWASP Agentic Application Top 10 Coverage",
+      "description": "Documents how each OWASP risk (AA01-AA10, December 2025) is addressed by the combination of ADAM architecture and this runtime implementation",
+      "properties": {
+        "AA01_excessive_agency":     { "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA02_unrestricted_autonomy":{ "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA03_goal_hijacking":       { "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA04_tool_misuse":          { "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA05_identity_access":      { "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA06_uncontrolled_delegation":{ "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA07_insufficient_monitoring":{ "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA08_supply_chain":         { "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA09_operational_disruption":{ "$ref": "#/definitions/owasp_risk_coverage" },
+        "AA10_misalignment":         { "$ref": "#/definitions/owasp_risk_coverage" }
+      }
+    }
+  },
+
+  "definitions": {
+    "owasp_risk_coverage": {
+      "type": "object",
+      "properties": {
+        "adam_architectural_control": {
+          "type": "string",
+          "description": "ADAM blueprint layer / component providing architectural coverage"
+        },
+        "agt_runtime_enforcement": {
+          "type": "string",
+          "description": "[AGT Light] AGT package providing runtime enforcement"
+        },
+        "boss_dimension": {
+          "type": "string",
+          "enum": ["sovereignty_action", "security_impact", "financial_exposure", "regulatory_impact", "reputational_risk", "rights_certainty", "doctrinal_alignment"]
+        },
+        "deployment_asset": {
+          "type": "string",
+          "description": "Specific deployment configuration asset implementing this coverage"
+        }
+      }
+    }
+  }
+}

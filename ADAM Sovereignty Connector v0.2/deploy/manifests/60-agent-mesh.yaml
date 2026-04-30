@@ -1,0 +1,60 @@
+# 81+ Agent Mesh — deployed as a StatefulSet so each pod has a stable ordinal
+# and DNS name (agent-0 ... agent-80 by default). Each pod runs the generic
+# adam/agent image and is assigned its role via AGENT_ORDINAL + configmap.
+#
+# Reference count = 81 agents across the seven canonical classes
+# (5 Domain Governors, 4 Orchestration Agents, 3 Human Interface Agents,
+#  39 Corporate Work Groups, 23 AI-Centric Division, 4 Digital Twin Agents,
+#  3 Meta-Governance Agents). The mesh is dynamic — a DNA profile may add
+# or withdraw agents within these classes, hence "81+".
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: agent-mesh-config, namespace: adam-agents }
+data:
+  mesh.json: |
+    {
+      "size": 81,
+      "core_engine": "http://core-engine.adam-core.svc.cluster.local:8080",
+      "flight_recorder": "http://flight-recorder.adam-observability.svc.cluster.local:8080"
+    }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: agents, namespace: adam-agents }
+spec:
+  clusterIP: None
+  selector: { adam.component: agent }
+  ports: [{ port: 8080, name: http }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: agent
+  namespace: adam-agents
+  labels: { adam.component: agent }
+spec:
+  serviceName: agents
+  replicas: 81
+  selector: { matchLabels: { adam.component: agent } }
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels: { adam.component: agent }
+    spec:
+      serviceAccountName: adam-agent
+      containers:
+        - name: agent
+          image: adam/agent:0.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AGENT_ORDINAL
+              valueFrom:
+                fieldRef: { fieldPath: metadata.name }
+            - { name: MESH_CONFIG, value: /etc/mesh/mesh.json }
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 3 }
+          resources: { requests: { cpu: 25m, memory: 48Mi }, limits: { cpu: 200m, memory: 192Mi } }
+          volumeMounts: [{ name: mesh, mountPath: /etc/mesh }]
+      volumes:
+        - name: mesh
+          configMap: { name: agent-mesh-config }

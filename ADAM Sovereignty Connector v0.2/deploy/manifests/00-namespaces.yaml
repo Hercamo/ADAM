@@ -1,0 +1,31 @@
+# ADAM skeleton namespaces.
+# Each corresponds to a doctrinal layer of the ADAM architecture.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-system
+  labels: { adam.layer: "system", pod-security.kubernetes.io/enforce: "restricted" }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-core
+  labels: { adam.layer: "core", pod-security.kubernetes.io/enforce: "restricted" }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-constitution
+  labels: { adam.layer: "constitution", pod-security.kubernetes.io/enforce: "restricted" }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-agents
+  labels: { adam.layer: "agents", pod-security.kubernetes.io/enforce: "baseline" }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adam-observability
+  labels: { adam.layer: "observability", pod-security.kubernetes.io/enforce: "baseline" }

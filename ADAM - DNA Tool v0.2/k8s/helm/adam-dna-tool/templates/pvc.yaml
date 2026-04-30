@@ -1,0 +1,36 @@
+{{- if .Values.persistence.uploads.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "adam-dna-tool.fullname" . }}-uploads
+  labels:
+    app.kubernetes.io/name: {{ include "adam-dna-tool.name" . }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.uploads.accessMode }}
+  {{- if .Values.persistence.uploads.storageClass }}
+  storageClassName: {{ .Values.persistence.uploads.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.uploads.size }}
+{{- end }}
+{{- if .Values.persistence.output.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "adam-dna-tool.fullname" . }}-output
+  labels:
+    app.kubernetes.io/name: {{ include "adam-dna-tool.name" . }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.output.accessMode }}
+  {{- if .Values.persistence.output.storageClass }}
+  storageClassName: {{ .Values.persistence.output.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.output.size }}
+{{- end }}

@@ -1,0 +1,63 @@
+global:
+  company: NetStreamX
+  platform: azure-local
+  adamVersion: '1.4'
+  mode: failover
+  dnaQuestionnaireVersion: '1.0'
+  bossFormulasVersion: '3.2'
+coreEngine:
+  mode: readonly
+  replicas: 2
+  cacheEnabled: true
+bossScoring:
+  mode: cached
+  dimensions:
+    security_impact: 5.0
+    sovereignty_action: 4.0
+    financial_exposure: 4.0
+    regulatory_impact: 3.0
+    reputational_risk: 3.0
+    rights_certainty: 3.0
+    doctrinal_alignment: 2.0
+  priorityTiers:
+    security_impact: Top
+    sovereignty_action: Very High
+    financial_exposure: Very High
+    regulatory_impact: High
+    reputational_risk: High
+    rights_certainty: High
+    doctrinal_alignment: Medium
+  weightSum: 24.0
+  thresholds:
+    soap:
+      min: 0
+      max: 10
+      label: SOAP - Safe & Optimum Autonomous Performance
+    moderate:
+      min: 11
+      max: 30
+      label: MODERATE - Constrained Execution
+    elevated:
+      min: 31
+      max: 50
+      label: ELEVATED - Exception Likely
+    high:
+      min: 51
+      max: 75
+      label: HIGH - Director Review Required
+    ohshat:
+      min: 76
+      max: 100
+      label: OHSHAT - Operational Hell, Send Humans Act Today!
+  compositeFormula: weighted_average
+  nonIdempotentPenalty: 15
+  nonIdempotentPenaltyType: additive_flat
+  criticalDimensionOverrideThreshold: 75
+agentMesh:
+  mode: survival
+  totalAgents: 81+
+  replicaCount: 1
+  referenceCount: 81
+flightRecorder:
+  mode: local-write
+  syncOnReconnect: true
