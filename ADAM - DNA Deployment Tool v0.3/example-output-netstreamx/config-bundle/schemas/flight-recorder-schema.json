@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://adam.io/schemas/flight-recorder/v2.1",
+  "title": "ADAM Flight Recorder Entry v2.1",
+  "description": "Hash-chained, WORM, tamper-evident, cryptographically signed evidence of an ADAM governance or execution event. Retention: 7 years. v2.1 adds ML-DSA-65 (FIPS 204) signature option.",
+  "type": "object",
+  "required": ["entry_id", "seq", "timestamp", "event_type", "agent_id", "evidence", "hash_chain"],
+  "properties": {
+    "entry_id": { "type": "string", "format": "uuid" },
+    "seq":      { "type": "integer", "minimum": 0 },
+    "timestamp":{ "type": "string", "format": "date-time" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "intent_received","intent_validated","intent_rejected",
+        "boss_scored","boss_override_applied",
+        "governor_evaluated","governors_concurred","governor_blocked",
+        "exception_emitted","exception_resolved",
+        "director_proxy_acting","director_approval","director_rejection",
+        "delegation_grant","delegation_revoke","delegation_exercised",
+        "action_executed","action_failed","action_recovered",
+        "doctrine_version_sealed","doctrine_drift_detected","doctrine_conflict_arbitrated",
+        "core_graph_mutation_proposed","core_graph_mutation_approved",
+        "vault_authorization_issued","vault_authorization_revoked",
+        "twin_divergence_detected","twin_simulation_recorded",
+        "self_audit_run","self_audit_finding",
+        "customer_signup","customer_signin","customer_subscribe","customer_cancel",
+        "playback_started","playback_blocked_rights","playback_blocked_age",
+        "asset_published","asset_rights_hold","asset_takedown",
+        "rl_training_started","rl_training_bounds_violation","rl_training_completed",
+        "pqc_key_rotation_started","pqc_key_rotation_completed","pqc_key_rotation_failed"
+      ]
+    },
+    "action_id":  { "type": "string", "format": "uuid" },
+    "intent_id":  { "type": "string", "format": "uuid" },
+    "agent_id":   { "type": "string" },
+    "agent_class":{ "type": "string" },
+    "doctrine_version": { "type": "string" },
+    "evidence": { "type": "object" },
+    "hash_chain": {
+      "type": "object",
+      "required": ["previous_hash","current_hash","algorithm"],
+      "properties": {
+        "previous_hash": { "type": "string" },
+        "current_hash":  { "type": "string" },
+        "algorithm":     { "type": "string", "enum": ["SHA-256","SHA3-256"], "default": "SHA-256" },
+        "anchor_id":     { "type": "string" }
+      }
+    },
+    "cryptographic_proof": {
+      "type": "object",
+      "properties": {
+        "signature":           { "type": "string" },
+        "signing_key_id":      { "type": "string" },
+        "signature_algorithm": { "type": "string", "enum": ["Ed25519","ECDSA-P256","ML-DSA-65"], "default": "Ed25519" }
+      }
+    },
+    "tamper_evident": { "type": "boolean", "default": true },
+    "worm": { "type": "boolean", "default": true }
+  }
+}

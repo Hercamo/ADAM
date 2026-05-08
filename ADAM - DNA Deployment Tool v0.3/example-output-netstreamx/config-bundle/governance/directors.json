@@ -1,0 +1,88 @@
+{
+  "governance_model": "5-director-constitution",
+  "company": "NetStreamX",
+  "profile_type": "test",
+  "test_proxy_mode": {
+    "enabled": true,
+    "real_person": "Michael Lamb",
+    "email": "michael.lamb@netstreamx.local",
+    "title_of_record": "CEO",
+    "represents_for_test": ["CEO", "CFO", "Legal Director", "Market Director", "CISO", "CPO"],
+    "binding_note": "Every Director-level approval, rejection, or doctrine change in this test instance is signed by michael.lamb. A Flight Recorder event of type 'director_proxy_acting' is written alongside every such signature capturing the role being proxied. Production cutover MUST re-seat distinct natural persons for each director and flip test_proxy_mode.enabled to false."
+  },
+  "directors": {
+    "ceo": {
+      "title": "CEO",
+      "real_seat_holder_test": "Michael Lamb",
+      "domain": "Overall enterprise intent; final arbiter of irreconcilable doctrine conflicts; sole authority for mission/vision changes.",
+      "authority": "Final arbiter for conflicts between directors. Sole authority to approve doctrine mutations of the doctrine-root vertex. CEO can grant or revoke any delegation in seconds.",
+      "delegation_cap_per_txn_test_usd": 5000,
+      "emergency_override_authority": true,
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    },
+    "cfo": {
+      "title": "CFO",
+      "real_seat_holder_test": "Michael Lamb (acting)",
+      "domain": "Financial doctrine, spending thresholds, capital allocation, autonomy budget caps.",
+      "authority": "Owns Financial Governor Agent. Can throttle financial autonomy to zero. Approves non-routine spend above governor threshold.",
+      "delegation_cap_per_txn_test_usd": 500,
+      "boss_dim_owned": ["financial_exposure"],
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    },
+    "legal_director": {
+      "title": "Legal Director",
+      "real_seat_holder_test": "Michael Lamb (acting)",
+      "domain": "Regulatory compliance doctrine, jurisdictional rules, legal personality boundary enforcement.",
+      "authority": "Owns Legal & Compliance Governor Agent. Any novel regulatory interpretation MUST route through Legal Director approval; agents may not self-resolve.",
+      "delegation_cap_per_txn_test_usd": null,
+      "boss_dim_owned": ["regulatory_impact", "rights_certainty"],
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    },
+    "market_director": {
+      "title": "Market Director",
+      "real_seat_holder_test": "Michael Lamb (acting)",
+      "domain": "External posture, brand doctrine, competitive strategy constraints.",
+      "authority": "Owns Market & Ecosystem Governor Agent. Approves marketing campaigns above campaign auto-approve threshold (test scale). Owns crisis communications doctrine.",
+      "delegation_cap_per_txn_test_usd": 2500,
+      "boss_dim_owned": ["reputational_risk"],
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    },
+    "ciso": {
+      "title": "CISO",
+      "real_seat_holder_test": "Michael Lamb (acting)",
+      "domain": "Security doctrine, trust boundaries, resilience posture, incident response thresholds.",
+      "authority": "Owns Security & Trust Governor Agent. Can invoke safe-mode / kill-switch on any agent. All OHSHAT tier incidents route here first.",
+      "delegation_cap_per_txn_test_usd": null,
+      "boss_dim_owned": ["security_impact", "sovereignty_action"],
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    }
+  },
+  "optional_directors": {
+    "cpo": {
+      "title": "CPO",
+      "active": true,
+      "real_seat_holder_test": "Michael Lamb (acting)",
+      "activation_reason": "4 declared product lines: Streaming, Gaming, Advertising, Live",
+      "domain": "Product & Innovation",
+      "authority": "Owns product roadmap doctrine, innovation pipeline governance, product-level autonomy budget allocation.",
+      "delegation_cap_per_txn_test_usd": 2000,
+      "boss_dim_owned": ["doctrinal_alignment"],
+      "interface_agents": ["hi-intent", "hi-gateway", "hi-explain"]
+    },
+    "cto": {
+      "title": "CTO",
+      "active": false,
+      "reason_not_active": "Test instance consolidates technical stewardship under CEO; CISO owns security-technical concerns."
+    }
+  },
+  "escalation_targets": {
+    "ohshat":   ["CEO (Michael Lamb)", "All Directors (proxied: Michael Lamb)", "Automatic Safe-Mode invoked"],
+    "high":     ["Relevant Domain Director (proxied: Michael Lamb)", "4-hour max response"],
+    "elevated": ["Domain Governor Agent", "Structured Exception Packet delivered"],
+    "moderate": ["Autonomous Execution", "Enhanced Logging", "Post-Hoc Review"],
+    "soap":     ["Autonomous Execution", "Minimal Logging"]
+  },
+  "interface_agents": ["Intent Interpretation Agent", "Human Trust Gateway Agent", "Explain-Back Agent"],
+  "directors_never_touch_workflows": true,
+  "directors_manage_exceptions_and_innovation_only": true
+}

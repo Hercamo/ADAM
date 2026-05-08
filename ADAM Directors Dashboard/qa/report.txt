@@ -1,3 +1,38 @@
+ADAM Directors Dashboard — QA snapshot
+======================================
+
+Spec version : v0.2 (May 2026)
+Snapshot date: 2026-05-07
+Source       : mirrored from D:\ADAM\deployment\NetStreamX\netstreamx_app\
+
+Parity check (scripts/verify_parity.sh against the live runtime)
+------------------------------------------------------------
+OK    index.html                              552c0b1f8fe7ae5d212fb4efa3f798bf
+OK    assets/app.js                           b0fcb13f6556386db553188dfab6948c
+OK    assets/styles.css                       32179c16ebbd55a9fd7897f3a0cde51a
+OK    assets/banner.svg                       41ad77b3f76272a0d2b118df498d4a7d
+OK    assets/demo/demo_overlays.css           b248acb48cc860620025c3f67e440d9a
+OK    assets/demo/demo_overlays.js            19999c5ef428ca96ebfe367da0460a3a
+OK    assets/views/directors_views.css        abb0fc6999a83710c38b069a204cdb6b
+OK    assets/views/directors_views.js         5725aa7cffdd1327ede69634b9897cab
+OK    data/demo-data.js                       4bb036257298585ad9ec89e778d26d05
+OK    server/dashboard_api.py                 e7135d287a56d4f1a62e31f2724cd547
+OK    server/dashboard_views.py               1261f1e881180f54268067a225b5f0a4
+OK    server/demo_addons.py                   6d0218e2d8f33f9bd07485de48fb9c00
+------------------------------------------------------------
+Parity: 12 OK, 0 FAIL
+
+Automated harness expectations
+------------------------------
+node    qa/headless-smoke.js     -> ~56 PASS / 0 FAIL  (jsdom SPA smoke)
+python3 qa/server-smoke.py       -> ~15 PASS / 0 FAIL  (in-process Flask smoke)
+python3 qa/views_smoke.py        ->  70 PASS / 0 FAIL  (read-only views)
+python3 deployment/NetStreamX/qa/qa_suite.py -> 117 PASS / 0 FAIL (full system, last clean run)
+
+Manual checklist: qa/QA-Checklist.md (14 sections, v0.2 expansion).
+
+Historical v1.0 SPA smoke (preserved for reference)
+---------------------------------------------------
 
 ==== QA Smoke ==== 37/37 passed ====
 

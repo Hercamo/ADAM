@@ -1,0 +1,37 @@
+principle: "Autonomy is the default state. Human involvement is earned by consequence, not convention."
+profile_type: "test"
+target_exceptions_per_director_per_day:
+  target_min: 5
+  target_max: 15
+  warn_above: 20
+  critical_above: 30
+
+escalation_structure:
+  packet_contents:
+    - "The original Intent Object (full schema)"
+    - "The proposed action and execution plan"
+    - "Per-dimension BOSS scores with policy provenance"
+    - "The specific dimension(s) that triggered escalation"
+    - "Predicted impact analysis (financial, regulatory, reputational)"
+    - "Alternative approaches with their BOSS scores"
+    - "Recommended decision with confidence level"
+    - "Time sensitivity (how long can this wait?)"
+    - "Link to related historical exceptions for pattern context"
+    - "One-click approve/reject/modify interface"
+
+feedback_loop:
+  storage: "Every resolved exception is stored in the Flight Recorder with original exception, human decision, reasoning, and outcome."
+  monthly_analysis: "Stability Agent clusters patterns monthly; emits doctrine_drift_detected if divergence."
+  auto_threshold_adjustment:
+    approved_90_percent: "Propose threshold relaxation to relevant director — ADAM never self-amends."
+    rejected_50_percent: "Propose tighter constraint to relevant director — human approval required."
+
+routing_by_tier:
+  soap:     "autonomous_execution_minimal_logging"
+  moderate: "autonomous_execution_enhanced_logging"
+  elevated: "domain_governor_structured_packet"
+  high:     "relevant_director_4hr_sla"
+  ohshat:   "all_directors_automatic_safe_mode"
+
+sacred_boundaries_override_tier: "ohshat"
+doctrine_self_amendment: false

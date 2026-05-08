@@ -1,0 +1,811 @@
+{
+  "total": 134,
+  "pass": 134,
+  "fail": 0,
+  "entries": [
+    {
+      "layer": 1,
+      "status": "PASS",
+      "name": "Content Update doc present",
+      "detail": "/sessions/bold-blissful-lamport/mnt/ADAM/ADAM Book New/ADAM - Autonomy Doctrine and Architecture Model - Content Update.docx"
+    },
+    {
+      "layer": 1,
+      "status": "PASS",
+      "name": "QA Harness support doc present",
+      "detail": "/sessions/bold-blissful-lamport/mnt/ADAM/ADAM Book New/ADAM - Support Documents/ADAM - QA Harness Suite - Quality Built In.docx"
+    },
+    {
+      "layer": 1,
+      "status": "PASS",
+      "name": "Build Cards / QA Harness Suite folder present",
+      "detail": "/sessions/bold-blissful-lamport/mnt/ADAM/ADAM Book New/Build Cards/QA Harness Suite"
+    },
+    {
+      "layer": 1,
+      "status": "PASS",
+      "name": "_INDEX.md present",
+      "detail": ""
+    },
+    {
+      "layer": 1,
+      "status": "PASS",
+      "name": "15 total card files (1 INDEX + 14 cards)",
+      "detail": "found 14 qa-*.md cards"
+    },
+    {
+      "layer": 2,
+      "status": "PASS",
+      "name": "Content Update: zipfile + word/document.xml",
+      "detail": ""
+    },
+    {
+      "layer": 2,
+      "status": "PASS",
+      "name": "Content Update: validate.py PASSED",
+      "detail": "All validations PASSED!"
+    },
+    {
+      "layer": 2,
+      "status": "PASS",
+      "name": "QA Harness Doc: zipfile + word/document.xml",
+      "detail": ""
+    },
+    {
+      "layer": 2,
+      "status": "PASS",
+      "name": "QA Harness Doc: validate.py PASSED",
+      "detail": "All validations PASSED!"
+    },
+    {
+      "layer": 3,
+      "status": "PASS",
+      "name": "Content Update: no version-tagged document references",
+      "detail": ""
+    },
+    {
+      "layer": 3,
+      "status": "PASS",
+      "name": "QA Harness Doc: no version-tagged document references",
+      "detail": ""
+    },
+    {
+      "layer": 4,
+      "status": "PASS",
+      "name": "Content Update: no author/editor/draft markers",
+      "detail": ""
+    },
+    {
+      "layer": 4,
+      "status": "PASS",
+      "name": "QA Harness Doc: no author/editor/draft markers",
+      "detail": ""
+    },
+    {
+      "layer": 5,
+      "status": "PASS",
+      "name": "Content Update: every reconstructed paragraph ends with terminal punct",
+      "detail": ""
+    },
+    {
+      "layer": 5,
+      "status": "PASS",
+      "name": "QA Harness Doc: every reconstructed paragraph ends with terminal punct",
+      "detail": ""
+    },
+    {
+      "layer": 6,
+      "status": "PASS",
+      "name": "Content Update: no heading-level skips (140 headings)",
+      "detail": ""
+    },
+    {
+      "layer": 6,
+      "status": "PASS",
+      "name": "QA Harness Doc: no heading-level skips (47 headings)",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "Content Update: header part exists",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "Content Update: footer part exists",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "Content Update: TOC field embedded",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "QA Harness Doc: header part exists",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "QA Harness Doc: footer part exists",
+      "detail": ""
+    },
+    {
+      "layer": 7,
+      "status": "PASS",
+      "name": "QA Harness Doc: TOC field embedded",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Part marker present: Part A \u2014 Doctrine Extensions...",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Part marker present: Part B \u2014 Optional Modules...",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Part marker present: Part C \u2014 Setup and Installatio...",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Part marker present: Part D \u2014 ADAM Parallel Product...",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Part marker present: Part E \u2014 Operational Enrichmen...",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A1 present",
+      "detail": "looked for \"Appendix A1 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A2 present",
+      "detail": "looked for \"Appendix A2 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A3 present",
+      "detail": "looked for \"Appendix A3 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A4 present",
+      "detail": "looked for \"Appendix A4 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A5 present",
+      "detail": "looked for \"Appendix A5 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A6 present",
+      "detail": "looked for \"Appendix A6 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A7 present",
+      "detail": "looked for \"Appendix A7 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A8 present",
+      "detail": "looked for \"Appendix A8 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A9 present",
+      "detail": "looked for \"Appendix A9 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A10 present",
+      "detail": "looked for \"Appendix A10 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A11 present",
+      "detail": "looked for \"Appendix A11 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A12 present",
+      "detail": "looked for \"Appendix A12 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A13 present",
+      "detail": "looked for \"Appendix A13 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A14 present",
+      "detail": "looked for \"Appendix A14 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A15 present",
+      "detail": "looked for \"Appendix A15 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Appendix A16 present",
+      "detail": "looked for \"Appendix A16 \""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "HSM: software-default + hardware baseline both stated",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Tiered LLM section present (Advanced/Standard/Efficient or three tiers)",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Opus-class frontier model worked example present",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "QA harness reframed as operator support",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "ADAMPLUS Reader's Note present",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "ADAMPLUS note names target systems",
+      "detail": ""
+    },
+    {
+      "layer": 8,
+      "status": "PASS",
+      "name": "Parallel Production Guidance: five phases named",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part I \u2014 Executive Summary...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part II \u2014 The Verification Pro...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part III \u2014 Suite Architecture...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part IV \u2014 The Ten Reference La...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part V \u2014 Evidence Packs...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part VI \u2014 Lifecycle Integratio...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part VII \u2014 Operator Extension...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part VIII \u2014 The 100/100 Refere...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Part marker: Part IX \u2014 What This Support Do...",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 1 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 2 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 3 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 4 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 5 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 6 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 7 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 8 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 9 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Layer 10 described in \u00a74",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Doctrinal status: operator support, not doctrine",
+      "detail": ""
+    },
+    {
+      "layer": 9,
+      "status": "PASS",
+      "name": "Adding/Replacing a Layer described",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "14 build cards in folder",
+      "detail": "got 14"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-e2e-smoke__Cross_Service_E2E_Runner.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-e2e-smoke__Cross_Service_E2E_Runner.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-e2e-smoke__Cross_Service_E2E_Runner.md: AC has >=3 checkable items",
+      "detail": "got 6"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer1-code-health__Layer_1_Code_Health.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer1-code-health__Layer_1_Code_Health.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer1-code-health__Layer_1_Code_Health.md: AC has >=3 checkable items",
+      "detail": "got 4"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer10-director-console__Layer_10_Director_Console_Mapping.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer10-director-console__Layer_10_Director_Console_Mapping.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer10-director-console__Layer_10_Director_Console_Mapping.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer2-crypto__Layer_2_Cryptography.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer2-crypto__Layer_2_Cryptography.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer2-crypto__Layer_2_Cryptography.md: AC has >=3 checkable items",
+      "detail": "got 4"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer3-chain-integrity__Layer_3_Chain_Integrity.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer3-chain-integrity__Layer_3_Chain_Integrity.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer3-chain-integrity__Layer_3_Chain_Integrity.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer4-governance-non-negotiables__Layer_4_Governance_Non-Negotiables.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer4-governance-non-negotiables__Layer_4_Governance_Non-Negotiables.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer4-governance-non-negotiables__Layer_4_Governance_Non-Negotiables.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer5-boss-methodology__Layer_5_BOSS_Methodology.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer5-boss-methodology__Layer_5_BOSS_Methodology.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer5-boss-methodology__Layer_5_BOSS_Methodology.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer6-flow-e2e__Layer_6_End-to-End_Flow.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer6-flow-e2e__Layer_6_End-to-End_Flow.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer6-flow-e2e__Layer_6_End-to-End_Flow.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer7-owasp-agentic__Layer_7_OWASP_Agentic_AA01AA10.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer7-owasp-agentic__Layer_7_OWASP_Agentic_AA01AA10.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer7-owasp-agentic__Layer_7_OWASP_Agentic_AA01AA10.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer8-ai-control__Layer_8_AI-Control_Bounds.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer8-ai-control__Layer_8_AI-Control_Bounds.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer8-ai-control__Layer_8_AI-Control_Bounds.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer9-customer-seed__Layer_9_Customer_Seed_Sanity.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer9-customer-seed__Layer_9_Customer_Seed_Sanity.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-layer9-customer-seed__Layer_9_Customer_Seed_Sanity.md: AC has >=3 checkable items",
+      "detail": "got 3"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-report-generator__Human_Report_Renderer.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-report-generator__Human_Report_Renderer.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-report-generator__Human_Report_Renderer.md: AC has >=3 checkable items",
+      "detail": "got 5"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-suite-runner__Suite_Driver.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-suite-runner__Suite_Driver.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-suite-runner__Suite_Driver.md: AC has >=3 checkable items",
+      "detail": "got 8"
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-views-smoke__Director_Views_Smoke_Runner.md: 20 sections in order",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-views-smoke__Director_Views_Smoke_Runner.md: doctrinal status declared",
+      "detail": ""
+    },
+    {
+      "layer": 10,
+      "status": "PASS",
+      "name": "qa-views-smoke__Director_Views_Smoke_Runner.md: AC has >=3 checkable items",
+      "detail": "got 4"
+    },
+    {
+      "layer": 11,
+      "status": "PASS",
+      "name": "14 expected card ids on disk",
+      "detail": "missing: set(); extra: set()"
+    },
+    {
+      "layer": 11,
+      "status": "PASS",
+      "name": "every card id named in _INDEX.md",
+      "detail": ""
+    },
+    {
+      "layer": 11,
+      "status": "PASS",
+      "name": "support doc names ten layers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "Content Update: no stub/marketing markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "QA Harness Doc: no stub/marketing markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-e2e-smoke__Cross_Service_E2E_Runner.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer1-code-health__Layer_1_Code_Health.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer10-director-console__Layer_10_Director_Console_Mapping.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer2-crypto__Layer_2_Cryptography.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer3-chain-integrity__Layer_3_Chain_Integrity.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer4-governance-non-negotiables__Layer_4_Governance_Non-Negotiables.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer5-boss-methodology__Layer_5_BOSS_Methodology.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer6-flow-e2e__Layer_6_End-to-End_Flow.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer7-owasp-agentic__Layer_7_OWASP_Agentic_AA01AA10.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer8-ai-control__Layer_8_AI-Control_Bounds.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-layer9-customer-seed__Layer_9_Customer_Seed_Sanity.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-report-generator__Human_Report_Renderer.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-suite-runner__Suite_Driver.md: no stub markers",
+      "detail": ""
+    },
+    {
+      "layer": 12,
+      "status": "PASS",
+      "name": "qa-views-smoke__Director_Views_Smoke_Runner.md: no stub markers",
+      "detail": ""
+    }
+  ]
+}
